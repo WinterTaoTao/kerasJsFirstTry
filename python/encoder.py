@@ -1,26 +1,59 @@
-import sys
+#!/usr/bin/env python
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
 import h5py
 import numpy as np
-import json
+import argparse
+import uuid
+import model_pb2
 
 
-class Encoder(object):
+def quantize_arr(arr):
+    """Quantization based on linear rescaling over min/max range.
+    """
+    min_val, max_val = np.min(arr), np.max(arr)
+    if max_val - min_val > 0:
+        quantized = np.round(255 * (arr - min_val) / (max_val - min_val))
+    else:
+        quantized = np.zeros(arr.shape)
+    quantized = quantized.astype(np.uint8)
+    min_val = min_val.astype(np.float32)
+    max_val = max_val.astype(np.float32)
+    return quantized, min_val, max_val
+
+
+class Encoder:
     """Encoder class.
-    Weights are serialized sequentially from the Keras flattened_layers representation
-    into:
-        - `weights`: a binary string representing the raw data bytes in float32
-            of all weights, sequentially concatenated.
-        - `metadata`: a list containing the byte length and tensor shape,
-            so that the original tensors can be reconstructed
+
+    Takes as input a Keras model saved in hdf5 format that includes the model architecture with the weights.
+    This is the resulting file from running the command:
+
+    ```
+    model.save('my_model.h5')
+    ```
+
+    See https://keras.io/getting-started/faq/#savingloading-whole-models-architecture-weights-optimizer-state
     """
 
-    def __init__(self, weights_hdf5_filepath):
-        if not weights_hdf5_filepath:
-            raise Exception('weights_hdf5_filepath must be defined.')
-        self.weights_hdf5_filepath = weights_hdf5_filepath
-        self.weights = b''
-        self.metadata = []
+    def __init__(self, hdf5_model_filepath, name, quantize):
+        if not hdf5_model_filepath:
+            raise Exception('hdf5_model_filepath must be provided.')
+        self.hdf5_model_filepath = hdf5_model_filepath
+        self.name = name
+        self.quantize = quantize
+
+        self.create_model()
+
+    def create_model(self):
+        """Initializes a model from the protobuf definition.
+        """
+        self.model = model_pb2.Model()
+        self.model.id = str(uuid.uuid4())
+        self.model.name = self.name
 
     def serialize(self):
         """serialize method.
@@ -28,54 +61,61 @@ class Encoder(object):
         load_weights_from_hdf5_group method of the Container class:
         see https://github.com/fchollet/keras/blob/master/keras/engine/topology.py#L2505-L2585
         """
-        hdf5_file = h5py.File(self.weights_hdf5_filepath, mode='r')
-        if 'layer_names' not in hdf5_file.attrs and 'model_weights' in hdf5_file:
-            f = hdf5_file['model_weights']
-        else:
-            f = hdf5_file
+        hdf5_file = h5py.File(self.hdf5_model_filepath, mode='r')
 
-        layer_names = [n.decode('utf8') for n in f.attrs['layer_names']]
-        offset = 0
-        for layer_name in layer_names:
+        self.model.keras_version = hdf5_file.attrs['keras_version']
+        self.model.backend = hdf5_file.attrs['backend']
+        self.model.model_config = hdf5_file.attrs['model_config']
+
+        f = hdf5_file['model_weights']
+        for layer_name in f.attrs['layer_names']:
             g = f[layer_name]
-            weight_names = [n.decode('utf8') for n in g.attrs['weight_names']]
-            if len(weight_names):
-                for weight_name in weight_names:
-                    meta = {}
-                    meta['layer_name'] = layer_name
-                    meta['weight_name'] = weight_name
-                    weight_value = g[weight_name].value
-                    bytearr = weight_value.astype(np.float32).tobytes()
-                    self.weights += bytearr
-                    meta['offset'] = offset
-                    meta['length'] = len(bytearr) // 4
-                    meta['shape'] = list(weight_value.shape)
-                    meta['type'] = 'float32'
-                    self.metadata.append(meta)
-                    offset += len(bytearr)
+            for weight_name in g.attrs['weight_names']:
+                weight_value = g[weight_name].value
+                w = self.model.model_weights.add()
+                w.layer_name = layer_name
+                w.weight_name = weight_name
+                w.shape.extend(list(weight_value.shape))
+                if self.quantize:
+                    w.type = 'uint8'
+                    quantized, min_val, max_val = quantize_arr(weight_value)
+                    w.data = quantized.astype(np.uint8).tobytes()
+                    w.quantize_min = min_val
+                    w.quantize_max = max_val
+                else:
+                    w.type = 'float32'
+                    w.data = weight_value.astype(np.float32).tobytes()
 
         hdf5_file.close()
 
     def save(self):
-        """Saves weights data (binary) and weights metadata (json)
+        """Saves as binary protobuf message
         """
-        weights_filepath = '{}_weights.buf'.format(os.path.splitext(self.weights_hdf5_filepath)[0])
-        with open(weights_filepath, mode='wb') as f:
-            f.write(self.weights)
-        metadata_filepath = '{}_metadata.json'.format(os.path.splitext(self.weights_hdf5_filepath)[0])
-        with open(metadata_filepath, mode='w') as f:
-            json.dump(self.metadata, f)
+        pb_model_filepath = os.path.join(os.path.dirname(self.hdf5_model_filepath),
+                                         '{}.bin'.format(self.name))
+        with open(pb_model_filepath, 'wb') as f:
+            f.write(self.model.SerializeToString())
+        print('Saved to binary file {}'.format(os.path.abspath(pb_model_filepath)))
 
 
 if __name__ == '__main__':
-    """
-    Usage:
-        python encoder.py example.hdf5
+    parser = argparse.ArgumentParser()
+    parser.add_argument('hdf5_model_filepath')
+    parser.add_argument('-n', '--name', type=str, required=False,
+                        help='model name (defaults to filename without extension if not provided)')
+    parser.add_argument('-q', '--quantize', action='store_true', required=False,
+                        help='quantize weights to 8-bit unsigned int')
+    args = parser.parse_args()
 
-    Output:
-        - example_weights.buf
-        - example_metadata.json
-    """
-    encoder = Encoder(*sys.argv[1:])
+    hdf5_model_filepath = args.hdf5_model_filepath
+
+    if args.name is not None:
+        name = args.name
+    else:
+        name = os.path.splitext(os.path.basename(hdf5_model_filepath))[0]
+
+    quantize = args.quantize
+
+    encoder = Encoder(hdf5_model_filepath, name, quantize)
     encoder.serialize()
     encoder.save()

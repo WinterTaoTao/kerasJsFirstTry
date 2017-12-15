@@ -14,8 +14,7 @@
     "build": "node build/build.js"
   },
   "dependencies": {
-    "keras": "^1.0.1",
-    "keras-js": "^0.3.0",
+    "keras-js": "file:../../WebstormProjects/keras-js",
     "vue": "^2.5.2",
     "vue-router": "^3.0.1"
   },

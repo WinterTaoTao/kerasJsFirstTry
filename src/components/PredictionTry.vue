@@ -6,6 +6,7 @@
 
 <script>
   // import * as KerasJS from 'keras'
+  // import * as KerasJS from 'keras-js-new'
   const MODEL_PATH = '/src/models/'
   const KerasJS = require('keras-js')
 
@@ -19,14 +20,18 @@
     },
     created: function () {
       this.model = new KerasJS.Model({
-        filepaths: {
-          model: MODEL_PATH + 'model.json',
-          weights: MODEL_PATH + 'model_weights.buf',
-          metadata: MODEL_PATH + 'model_metadata.json'
-        },
+        filepath: MODEL_PATH + 'model.bin',
         filesystem: true
       })
-      for (let i = 0; i < 5; i++) {
+      // this.model = new KerasJS.Model({
+      //   filepaths: {
+      //     model: MODEL_PATH + 'model.json',
+      //     weights: MODEL_PATH + 'model_weights.buf',
+      //     metadata: MODEL_PATH + 'model_metadata.json'
+      //   },
+      //   filesystem: true
+      // })
+      for (let i = 1; i < 6; i++) {
         this.model.ready()
           .then(() => {
             // const sample = [2]
@@ -37,13 +42,26 @@
             return this.model.predict(inputData)
           })
           .then(outputData => {
-            console.log(i + ':' + outputData.output)
-            this.msg += ' ' + outputData.output
+            console.log(typeof (outputData.output[0]))
+            this.msg += '\n' + i + ': ' + outputData.output[0]
           })
-        // .catch(err => {
-        //   this.msg = 'Error: Can\'t Predict'
-        // })
+          // .catch(err => {
+          //   this.msg = 'Error: Can\'t Predict'
+          // })
       }
+
+      // this.model.ready()
+      //   .then(() => {
+      //     // const sample = [2]
+      //     const inputData = {
+      //       'input': new Float32Array([2])
+      //     }
+      //     // console.log(inputData)
+      //     return this.model.predict(inputData)
+      //   })
+      //   .then(outputData => {
+      //     this.msg = ' ' + outputData.output
+      //   })
     }
   }
 </script>
