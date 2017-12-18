@@ -51,7 +51,7 @@
       this.isReady = true
       this.msg = 'Ready'
       var end = new Date().getTime()
-      console.log('Initialize Time: ', end - start, 'ms')
+      console.log('Initialization Time: ', end - start, 'ms')
       // // this.runModel()
       // this.$nextTick(function () {
       //   setTimeout(() => {
