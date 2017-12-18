@@ -24,7 +24,7 @@ if (process.env.NODE_ENV === 'production') {
     // uglify: unused needs to be set to false or else library will not work properly
     new webpack.optimize.UglifyJsPlugin({
       compress: { warnings: false, unused: false },
-      output: { comments: false }
+      msg: { comments: false }
     })
   ]
 } else {

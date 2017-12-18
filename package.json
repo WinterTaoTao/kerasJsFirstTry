@@ -14,7 +14,10 @@
     "build": "node build/build.js"
   },
   "dependencies": {
+    "blueimp-load-image": "^2.17.1",
     "keras-js": "file:../../WebstormProjects/keras-js",
+    "ndarray": "^1.0.18",
+    "ndarray-ops": "^1.2.2",
     "vue": "^2.5.2",
     "vue-router": "^3.0.1"
   },
