@@ -5,7 +5,7 @@
             v-bind:height="imageSize"
     >
     </canvas><br/>
-    <!--<img id="input" v-bind:src="sampleImgPath"/>-->
+    <img id="input" style="display: none" v-bind:src="sampleImgPath"/>
     <button @click="runModel" :disabled="isPredicting">predict</button>
     <div v-if="msg">{{msg}}</div>
     <div v-for="items in output">
@@ -20,44 +20,41 @@
   import loadImage from 'blueimp-load-image'
   import _ from 'lodash'
   import { imagenetClasses } from '../data/imagenet'
-  // import {imagenetClassesTopK} from "../util/imagenet";
+  import ScanImage from './ScanImage'
 
   const KerasJS = require('keras-js')
 
   export default {
+    components: {ScanImage},
     name: 'object-detection-try',
 
     data () {
       return {
-        modelFilepath: '/src/models/resnet50.bin',
-        // modelFilepath: 'https://transcranial.github.io/keras-js-demos-data/resnet50/resnet50.bin',
+        modelFilepath: '/src/models/squeezenet_v1.1.bin',
         sampleImgPath: '/src/assets/sample-images/dog1.jpg',
-        imageSize: 224,
+        imageSize: 227,
         msg: 'Preparing...',
         output: null,
         isReady: false,
         isPredicting: false
       }
     },
+
     async created () {
-      var start = new Date().getTime()
+      const img = new Image()
+      img.src = this.sampleImgPath
+      const width = img.width
+      const height = img.height
+      console.log(width, height)
       this.model = new KerasJS.Model({
         filepath: this.modelFilepath,
-        // gpu: false,
+        gpu: true,
         filesystem: true
       })
-      this.loadImageToCanva(this.sampleImgPath)
+      this.loadImageToCanva(this.sampleImgPath, this.imageSize)
       await this.model.ready()
       this.isReady = true
       this.msg = 'Ready'
-      var end = new Date().getTime()
-      console.log('Initialization Time: ', end - start, 'ms')
-      // // this.runModel()
-      // this.$nextTick(function () {
-      //   setTimeout(() => {
-      //     this.runModel()
-      //   }, 10)
-      // })
     },
 
     methods: {
@@ -79,16 +76,16 @@
         return dataProcessedTensor.data
       },
 
-      loadImageToCanva (imagePath) {
+      loadImageToCanva (imagePath, canvaSize) {
         loadImage(
           imagePath,
           function (img) {
             const ctx = document.getElementById('input-img').getContext('2d')
-            ctx.drawImage(img, 0, 0)
+            ctx.drawImage(img, 0, 0, canvaSize, canvaSize)
           },
           {
-            maxWidth: this.imageSize,
-            maxHeight: this.imageSize,
+            maxWidth: canvaSize,
+            maxHeight: canvaSize,
             cover: true,
             crop: true,
             canvas: true,
@@ -99,32 +96,32 @@
 
       async runModel () {
         if (this.isReady && !this.isPredicting) {
-          var start = new Date().getTime()
+          const start = new Date().getTime()
           this.isPredicting = true
           console.log('Predicting...', this.isPredicting)
 
+          // load image in canva
           const ctx = document.getElementById('input-img').getContext('2d')
           const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height)
 
+          // preprocess image data
           const preprocessedData = this.preprocess(imageData)
           const inputName = this.model.inputLayerNames[0]
-          // console.log(inputName)
+
+          // recognize
           const outputName = this.model.outputLayerNames[0]
           const inputData = { [inputName]: preprocessedData }
           const outputData = await this.model.predict(inputData)
+
           this.output = outputData[outputName]
           this.output = this.imagenetClassesTopK(this.output, 5)
-          // this.model.predict(inputData).then(outputData => {
-          //   this.output = outputData[outputName]
-          //   this.isPredicting = false
-          // })
-          this.isPredicting = false
-          this.msg = 'finished'
-          var end = new Date().getTime()
+
+          const end = new Date().getTime()
+          this.msg = 'Finished: cost ' + (end - start) + 'ms'
           console.log('Predict Time: ', end - start, 'ms')
+          this.isPredicting = false
         } else if (this.isPredicting) {
           this.msg = 'Predicting...Not Finish Yet'
-          // console.log('Not ready ')
         } else {
           this.msg = 'Preparing...Not Ready Yet'
         }
@@ -151,9 +148,9 @@
 </script>
 
 <style scoped>
-#input-img {
-  border: 1px solid red;
-  /*width: 500px;*/
-  /*height: 400px;*/
-}
+/*#input-img {*/
+  /*border: 1px solid red;*/
+  /*!*width: 500px;*!*/
+  /*!*height: 400px;*!*/
+/*}*/
 </style>
