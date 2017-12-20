@@ -25,7 +25,7 @@
       }
     },
 
-    async created () {
+    created () {
       // const img = new Image()
       // img.src = this.sampleImgPath
       // this.src_width = img.width
@@ -99,6 +99,14 @@
           filesystem: true
         })
         await this.model.ready()
+        this.src_width = img.width
+        this.src_height = img.height
+        console.log(this.src_width, this.src_height)
+      },
+
+      test () {
+        const img = new Image()
+        img.src = this.sampleImgPath
         this.src_width = img.width
         this.src_height = img.height
         console.log(this.src_width, this.src_height)
