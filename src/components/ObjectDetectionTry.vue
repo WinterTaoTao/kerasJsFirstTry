@@ -1,11 +1,11 @@
 <template>
   <div>
     <canvas id="input-img"
-            v-bind:width="imageSize"
-            v-bind:height="imageSize"
+            v-bind:width="canvaSize"
+            v-bind:height="canvaSize"
     >
     </canvas><br/>
-    <img id="input" style="display: none" v-bind:src="sampleImgPath"/>
+    <img id="src_img" style="display: none" v-bind:src="sampleImgPath"/>
     <button @click="runModel" :disabled="isPredicting">predict</button>
     <div v-if="msg">{{msg}}</div>
     <div v-for="items in output">
@@ -30,31 +30,29 @@
 
     data () {
       return {
-        modelFilepath: '/src/models/squeezenet_v1.1.bin',
+        modelFilePath: '/src/models/squeezenet_v1.1.bin',
         sampleImgPath: '/src/assets/sample-images/dog1.jpg',
-        imageSize: 227,
+        canvaSize: 227,
         msg: 'Preparing...',
         output: null,
         isReady: false,
-        isPredicting: false
+        isPredicting: false,
+        src_width: 0,
+        src_height: 0
       }
     },
 
-    async created () {
+    created () {
+      this.initModel()
+    },
+
+    mounted () {
       const img = new Image()
       img.src = this.sampleImgPath
-      const width = img.width
-      const height = img.height
-      console.log(width, height)
-      this.model = new KerasJS.Model({
-        filepath: this.modelFilepath,
-        gpu: true,
-        filesystem: true
-      })
-      this.loadImageToCanva(this.sampleImgPath, this.imageSize)
-      await this.model.ready()
-      this.isReady = true
-      this.msg = 'Ready'
+      this.src_width = img.width
+      this.src_height = img.height
+      console.log(this.src_width, this.src_height)
+      this.loadImageToCanva(this.sampleImgPath, this.canvaSize)
     },
 
     methods: {
@@ -142,6 +140,17 @@
           }
         })
         return topK
+      },
+
+      async initModel () {
+        this.model = new KerasJS.Model({
+          filepath: this.modelFilePath,
+          gpu: true,
+          filesystem: true
+        })
+        await this.model.ready()
+        this.isReady = true
+        this.msg = 'Ready'
       }
     }
   }
