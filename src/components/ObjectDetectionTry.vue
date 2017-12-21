@@ -1,11 +1,10 @@
 <template>
   <div>
     <canvas id="input-img"
-            v-bind:width="canvaSize"
-            v-bind:height="canvaSize"
+            v-bind:width="canvasSize"
+            v-bind:height="canvasSize"
     >
     </canvas><br/>
-    <img id="src_img" style="display: none" v-bind:src="sampleImgPath"/>
     <button @click="runModel" :disabled="isPredicting">predict</button>
     <div v-if="msg">{{msg}}</div>
     <div v-for="items in output">
@@ -32,7 +31,7 @@
       return {
         modelFilePath: '/src/models/squeezenet_v1.1.bin',
         sampleImgPath: '/src/assets/sample-images/dog1.jpg',
-        canvaSize: 227,
+        canvasSize: 227,
         msg: 'Preparing...',
         output: null,
         isReady: false,
@@ -47,12 +46,7 @@
     },
 
     mounted () {
-      const img = new Image()
-      img.src = this.sampleImgPath
-      this.src_width = img.width
-      this.src_height = img.height
-      console.log(this.src_width, this.src_height)
-      this.loadImageToCanva(this.sampleImgPath, this.canvaSize)
+      this.loadImageToCanva(this.sampleImgPath, this.canvasSize)
     },
 
     methods: {
@@ -82,11 +76,6 @@
             ctx.drawImage(img, 0, 0, canvaSize, canvaSize)
           },
           {
-            maxWidth: canvaSize,
-            maxHeight: canvaSize,
-            cover: true,
-            crop: true,
-            canvas: true,
             crossOrigin: 'Anonymous'
           }
         )
