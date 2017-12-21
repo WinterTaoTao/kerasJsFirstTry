@@ -7,6 +7,7 @@
 </template>
 
 <script>
+  /* eslint-disable */
   import ndarray from 'ndarray'
   import ops from 'ndarray-ops'
   // import loadImage from 'blueimp-load-image'
@@ -98,16 +99,17 @@
           imgX, imgY, imgW, imgH,
           cvX, cvY, cvW, cvH
         )
-        return canvas
+        this.objectDetection(canvas, imgX, imgY, imgW, imgH)
+        // return canvas
       },
 
       scan () {
         // original picture
-        const originalImgCanvas = this.insertNewCanva(
+        this.insertNewCanva(
           this.sampleImgPath, this.canvasSize,
-          0, 0, srcHeight, srcHeight
+          0, 0, srcWidth, srcHeight
         )
-        this.objectDetection(originalImgCanvas, 0, 0, srcWidth, srcHeight)
+        // this.objectDetection(originalImgCanvas, 0, 0, srcWidth, srcHeight)
 
         let scannerSize = srcWidth < srcHeight ? srcWidth : srcHeight
         let scannerLayer = 0
@@ -130,11 +132,11 @@
               if (x + scannerSize > srcWidth) {
                 inputImgW = srcWidth - x
               }
-              const canvas = this.insertNewCanva(
+              this.insertNewCanva(
                 this.sampleImgPath, this.canvasSize,
                 x, y, inputImgW, inputImgH
               )
-              this.objectDetection(canvas, x, y, inputImgW, inputImgH)
+              // this.objectDetection(canvas, x, y, inputImgW, inputImgH)
             }
           }
           console.log(scannerSize, scannerLayer)
@@ -144,14 +146,15 @@
       },
 
       async objectDetection (canvas, x = null, y = null, width = null, height = null) {
+
         const ctx = canvas.getContext('2d')
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
         const output = await this.runModel(imageData)
         const result = output[0]
+        console.log(result.name)
 
         if (result.probability > 0.5) {
           this.items.push({ item_name: result.name, x: x, y: y, width: width, height: height })
-          console.log(this.items[this.items.length - 1])
         }
       },
 
