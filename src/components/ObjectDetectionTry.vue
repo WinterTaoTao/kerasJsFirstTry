@@ -16,15 +16,13 @@
 <script>
   import ndarray from 'ndarray'
   import ops from 'ndarray-ops'
-  import loadImage from 'blueimp-load-image'
+  // import loadImage from 'blueimp-load-image'
   import _ from 'lodash'
   import { imagenetClasses } from '../data/imagenet'
-  import ScanImage from './ScanImage'
 
   const KerasJS = require('keras-js')
 
   export default {
-    components: {ScanImage},
     name: 'object-detection-try',
 
     data () {
@@ -35,9 +33,7 @@
         msg: 'Preparing...',
         output: null,
         isReady: false,
-        isPredicting: false,
-        src_width: 0,
-        src_height: 0
+        isPredicting: false
       }
     },
 
@@ -69,16 +65,22 @@
       },
 
       loadImageToCanva (imagePath, canvaSize) {
-        loadImage(
-          imagePath,
-          function (img) {
-            const ctx = document.getElementById('input-img').getContext('2d')
-            ctx.drawImage(img, 0, 0, canvaSize, canvaSize)
-          },
-          {
-            crossOrigin: 'Anonymous'
-          }
-        )
+        const img = new Image()
+        img.src = this.sampleImgPath
+        img.onload = function () {
+          const ctx = document.getElementById('input-img').getContext('2d')
+          ctx.drawImage(img, 0, 0, canvaSize, canvaSize)
+        }
+        // loadImage(
+        //   imagePath,
+        //   function (img) {
+        //     const ctx = document.getElementById('input-img').getContext('2d')
+        //     ctx.drawImage(img, 0, 0, canvaSize, canvaSize)
+        //   },
+        //   {
+        //     crossOrigin: 'Anonymous'
+        //   }
+        // )
       },
 
       async runModel () {
@@ -90,6 +92,7 @@
           // load image in canva
           const ctx = document.getElementById('input-img').getContext('2d')
           const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height)
+          // console.log(imageData)
 
           // preprocess image data
           const preprocessedData = this.preprocess(imageData)

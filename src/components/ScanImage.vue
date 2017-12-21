@@ -1,16 +1,22 @@
 <template>
   <div>
     <a href="#/objectDetection">Object Detection Demo</a><br/>
-    <button @click="scan()">scan</button><br/>
+    <button id='scan-button' @click="scan()">scan</button><br/>
     <div id="scan-img-root"></div>
   </div>
 </template>
 
 <script>
-  import loadImage from 'blueimp-load-image'
+  import ndarray from 'ndarray'
+  import ops from 'ndarray-ops'
+  // import loadImage from 'blueimp-load-image'
+  import _ from 'lodash'
+  import { imagenetClasses } from '../data/imagenet'
+
   const KerasJS = require('keras-js')
   let srcWidth = 0
   let srcHeight = 0
+  let srcImg = new Image()
 
   export default {
     name: 'scan-image',
@@ -22,8 +28,10 @@
         inputImgSize: 0,
         model: null,
 
-        msg: 'Preparing...',
-        isPredicting: false,
+        items: [], // store the result
+
+        // msg: 'Preparing...',
+        // isPredicting: false,
         isReady: false
       }
     },
@@ -33,15 +41,20 @@
     },
 
     mounted () {
-      const img = new Image()
-      img.onload = function () {
-        srcWidth = img.width
-        srcHeight = img.height
+      document.getElementById('scan-button').disabled = true
+
+      srcImg.src = this.sampleImgPath
+      srcImg.onload = function () {
+        srcWidth = srcImg.width
+        srcHeight = srcImg.height
+        document.getElementById('scan-button').disabled = false
       }
-      img.src = this.sampleImgPath
     },
 
     methods: {
+      test () {
+        console.log('test')
+      },
       async initModel () {
         this.model = new KerasJS.Model({
           filepath: this.modelFilePath,
@@ -79,63 +92,24 @@
           }
         }
 
-        // load image to this canvas
-        loadImage(
-          imagePath,
-          function (img) {
-            const ctx = canvas.getContext('2d')
-            ctx.drawImage(
-              img,
-              imgX, imgY, imgW, imgH,
-              cvX, cvY, cvW, cvH
-            )
-          },
-          {
-            crossOrigin: 'Anonymous'
-          }
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(
+          srcImg,
+          imgX, imgY, imgW, imgH,
+          cvX, cvY, cvW, cvH
         )
-      },
-
-      async runModel (imageData) {
-        if (this.isReady && !this.isPredicting) {
-          const start = new Date().getTime()
-          this.isPredicting = true
-          console.log('Predicting...', this.isPredicting)
-
-          // // load image in canva
-          // const ctx = document.getElementById('input-img').getContext('2d')
-          // const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height)
-
-          // preprocess image data
-          const preprocessedData = this.preprocess(imageData)
-          const inputName = this.model.inputLayerNames[0]
-
-          // recognize
-          const outputName = this.model.outputLayerNames[0]
-          const inputData = { [inputName]: preprocessedData }
-          const outputData = await this.model.predict(inputData)
-
-          this.output = outputData[outputName]
-          this.output = this.imagenetClassesTopK(this.output, 5)
-
-          const end = new Date().getTime()
-          this.msg = 'Finished: cost ' + (end - start) + 'ms'
-          console.log('Predict Time: ', end - start, 'ms')
-          this.isPredicting = false
-        } else if (this.isPredicting) {
-          this.msg = 'Predicting...Not Finish Yet'
-        } else {
-          this.msg = 'Preparing...Not Ready Yet'
-        }
+        return canvas
       },
 
       scan () {
-        this.insertNewCanva(
+        // original picture
+        const originalImgCanvas = this.insertNewCanva(
           this.sampleImgPath, this.canvasSize,
-          0, 0, srcWidth, srcHeight
+          0, 0, srcHeight, srcHeight
         )
+        this.objectDetection(originalImgCanvas, 0, 0, srcWidth, srcHeight)
 
-        let scannerSize = srcWidth > srcHeight ? srcHeight : srcWidth
+        let scannerSize = srcWidth < srcHeight ? srcWidth : srcHeight
         let scannerLayer = 0
 
         while (scannerSize > 32 && scannerLayer < 3) {
@@ -156,15 +130,85 @@
               if (x + scannerSize > srcWidth) {
                 inputImgW = srcWidth - x
               }
-              this.insertNewCanva(this.sampleImgPath, this.canvasSize,
+              const canvas = this.insertNewCanva(
+                this.sampleImgPath, this.canvasSize,
                 x, y, inputImgW, inputImgH
               )
+              this.objectDetection(canvas, x, y, inputImgW, inputImgH)
             }
           }
           console.log(scannerSize, scannerLayer)
           scannerLayer++
           scannerSize /= 2
         }
+      },
+
+      async objectDetection (canvas, x = null, y = null, width = null, height = null) {
+        const ctx = canvas.getContext('2d')
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const output = await this.runModel(imageData)
+        const result = output[0]
+
+        if (result.probability > 0.5) {
+          this.items.push({ item_name: result.name, x: x, y: y, width: width, height: height })
+          console.log(this.items[this.items.length - 1])
+        }
+      },
+
+      async runModel (imageData) {
+        const start = new Date().getTime()
+
+        // preprocess image data
+        const preprocessedData = this.preprocess(imageData)
+        const inputName = this.model.inputLayerNames[0]
+
+        // recognize
+        const outputName = this.model.outputLayerNames[0]
+        const inputData = { [inputName]: preprocessedData }
+        const outputData = await this.model.predict(inputData)
+
+        let output = outputData[outputName]
+        // console.log(output)
+        output = this.imagenetClassesTopK(output, 1)
+
+        const end = new Date().getTime()
+        console.log('Predict Time: ', end - start, 'ms')
+        return output
+      },
+
+      preprocess (imageData) {
+        const {data, width, height} = imageData
+
+        // data processing
+        // see https://github.com/fchollet/keras/blob/master/keras/applications/imagenet_utils.py
+        const dataTensor = ndarray(new Float32Array(data), [width, height, 4])
+        const dataProcessedTensor = ndarray(new Float32Array(width * height * 3), [width, height, 3])
+
+        ops.subseq(dataTensor.pick(null, null, 2), 103.939)
+        ops.subseq(dataTensor.pick(null, null, 1), 116.779)
+        ops.subseq(dataTensor.pick(null, null, 0), 123.68)
+        ops.assign(dataProcessedTensor.pick(null, null, 0), dataTensor.pick(null, null, 2))
+        ops.assign(dataProcessedTensor.pick(null, null, 1), dataTensor.pick(null, null, 1))
+        ops.assign(dataProcessedTensor.pick(null, null, 2), dataTensor.pick(null, null, 0))
+
+        return dataProcessedTensor.data
+      },
+
+      imagenetClassesTopK (classProbabilities, k = 5) {
+        const probs = _.isTypedArray(classProbabilities) ? Array.prototype.slice.call(classProbabilities) : classProbabilities
+
+        const sorted = _.reverse(_.sortBy(probs.map((prob, index) => [prob, index]), probIndex => probIndex[0]))
+
+        const topK = _.take(sorted, k).map(probIndex => {
+          const iClass = imagenetClasses[probIndex[1]]
+          return {
+            id: iClass[0],
+            index: parseInt(probIndex[1], 10),
+            name: iClass[1].replace(/_/, ' '),
+            probability: probIndex[0]
+          }
+        })
+        return topK
       }
     }
   }
