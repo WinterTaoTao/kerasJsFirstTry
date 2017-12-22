@@ -15,9 +15,13 @@
   import { imagenetClasses } from '../data/imagenet'
 
   const KerasJS = require('keras-js')
+  const async = require('async')
+
   let srcWidth = 0
   let srcHeight = 0
   let srcImg = new Image()
+  let isModelReady = false
+  let isSrcImgReady = false
 
   export default {
     name: 'scan-image',
@@ -33,26 +37,29 @@
 
         // msg: 'Preparing...',
         // isPredicting: false,
-        isReady: false
       }
     },
 
     created () {
-      this.initModel()
     },
 
     mounted () {
+      this.initModel()
       this.loadSrcImg(this.sampleImgPath)
     },
 
     methods: {
       async initModel () {
+        document.getElementById('scan-button').disabled = true
         this.model = new KerasJS.Model({
           filepath: this.modelFilePath,
           gpu: true,
           filesystem: true
         })
         await this.model.ready()
+        isModelReady = true
+        if(isModelReady && isSrcImgReady)
+          document.getElementById('scan-button').disabled = false
       },
 
       loadSrcImg (imgPath) {
@@ -61,7 +68,9 @@
         srcImg.onload = function () {
           srcWidth = srcImg.width
           srcHeight = srcImg.height
-          document.getElementById('scan-button').disabled = false
+          isSrcImgReady = true
+          if(isModelReady && isSrcImgReady)
+            document.getElementById('scan-button').disabled = false
         }
       },
 
@@ -80,41 +89,29 @@
         canvas.style.margin = '5px'
         canvas.style.border = '1px solid darkred'
 
-        // define draw area
-        // if (imgW !== imgH) {
-        //   if (imgW > imgH) {
-        //     const movement = (canvasSize / imgW) * ((imgW - imgH) / 2)
-        //     cvY += movement
-        //     cvH -= 2 * movement
-        //   } else {
-        //     const movement = (canvasSize / imgH) * ((imgH - imgW) / 2)
-        //     cvX += movement
-        //     cvW -= 2 * movement
-        //   }
-        // }
-
         const ctx = canvas.getContext('2d')
         ctx.drawImage(
           srcImg,
           imgX, imgY, imgW, imgH,
           cvX, cvY, cvW, cvH
         )
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        this.objectDetection(imageData, imgX, imgY, imgW, imgH)
-        // return canvas
+        return ctx.getImageData(0, 0, this.canvasSize, this.canvasSize)
       },
 
-      scan () {
+      async scan () {
+        document.getElementById('scan-button').disabled = true
+        const start = new Date().getTime()
         // original picture
-        this.insertNewCanva(
+        let imageData = this.insertNewCanva(
           this.sampleImgPath, this.canvasSize,
           0, 0, srcWidth, srcHeight
         )
-        // this.objectDetection(originalImgCanvas, 0, 0, srcWidth, srcHeight)
+        await this.objectDetection(imageData, 0, 0, srcWidth, srcHeight)
 
         let scannerSize = srcWidth < srcHeight ? srcWidth : srcHeight
         let scannerLayer = 0
 
+        // scan parts of picture
         while (scannerSize > 32 && scannerLayer < 1) {
           let x = 0
           let y = 0
@@ -133,45 +130,53 @@
               if (x + scannerSize > srcWidth) {
                 inputImgW = srcWidth - x
               }
-              this.insertNewCanva(
+              imageData = this.insertNewCanva(
                 this.sampleImgPath, this.canvasSize,
                 x, y, inputImgW, inputImgH
               )
-              // this.objectDetection(canvas, x, y, inputImgW, inputImgH)
+              await this.objectDetection(imageData, x, y, inputImgW, inputImgH)
             }
           }
-          // console.log(scannerSize, scannerLayer)
           scannerLayer++
           scannerSize /= 2
         }
+
+        for (let i in this.items) {
+          console.log(this.items[i].item_name)
+        }
+
+        const end = new Date().getTime()
+        console.log('Total Scan Time: ', end - start, 'ms')
+        document.getElementById('scan-button').disabled = false
       },
 
       async objectDetection (imageData, x = null, y = null, width = null, height = null) {
-        console.log('obd', 1)
+
         // const ctx = canvas.getContext('2d')
         // const imageData = ctx.getImageData(0, 0, this.canvasSize, this.canvasSize)
+        // console.log('obd', imageData)
         const output = await this.runModel(imageData)
         const result = output[0]
         console.log(result.name, result.probability)
 
         if (result.probability > 0.5) {
           this.items.push({ item_name: result.name, x: x, y: y, width: width, height: height })
+          // console.log(this.items.item_name)
         }
       },
 
       async runModel (imageData) {
         const start = new Date().getTime()
-        console.log('runModel', 2)
+        // console.log('runModel', 2)
 
         // preprocess image data
         const preprocessedData = this.preprocess(imageData)
         const inputName = this.model.inputLayerNames[0]
-
-        // recognize
         const outputName = this.model.outputLayerNames[0]
         const inputData = { [inputName]: preprocessedData }
+
+        // recognize
         const outputData = await this.model.predict(inputData)
-        console.log('runModel', outputData)
 
         let output = outputData[outputName]
         // console.log(output)
