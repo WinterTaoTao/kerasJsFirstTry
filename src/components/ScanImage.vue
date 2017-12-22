@@ -42,20 +42,10 @@
     },
 
     mounted () {
-      document.getElementById('scan-button').disabled = true
-
-      srcImg.src = this.sampleImgPath
-      srcImg.onload = function () {
-        srcWidth = srcImg.width
-        srcHeight = srcImg.height
-        document.getElementById('scan-button').disabled = false
-      }
+      this.loadSrcImg(this.sampleImgPath)
     },
 
     methods: {
-      test () {
-        console.log('test')
-      },
       async initModel () {
         this.model = new KerasJS.Model({
           filepath: this.modelFilePath,
@@ -65,10 +55,20 @@
         await this.model.ready()
       },
 
+      loadSrcImg (imgPath) {
+        document.getElementById('scan-button').disabled = true
+        srcImg.src = imgPath
+        srcImg.onload = function () {
+          srcWidth = srcImg.width
+          srcHeight = srcImg.height
+          document.getElementById('scan-button').disabled = false
+        }
+      },
+
       insertNewCanva (
         imagePath, canvasSize,
-        imgX = 0, imgY = 0, imgW = canvasSize, imgH = canvasSize,
-        cvX = 0, cvY = 0, cvW = canvasSize, cvH = canvasSize
+        imgX = 0, imgY = 0, imgW = this.canvasSize, imgH = this.canvasSize,
+        cvX = 0, cvY = 0, cvW = this.canvasSize, cvH = this.canvasSize
       ) {
         // create a new canvas
         const canvas = document.createElement('canvas')
@@ -81,17 +81,17 @@
         canvas.style.border = '1px solid darkred'
 
         // define draw area
-        if (imgW !== imgH) {
-          if (imgW > imgH) {
-            const movement = (canvasSize / imgW) * ((imgW - imgH) / 2)
-            cvY += movement
-            cvH -= 2 * movement
-          } else {
-            const movement = (canvasSize / imgH) * ((imgH - imgW) / 2)
-            cvX += movement
-            cvW -= 2 * movement
-          }
-        }
+        // if (imgW !== imgH) {
+        //   if (imgW > imgH) {
+        //     const movement = (canvasSize / imgW) * ((imgW - imgH) / 2)
+        //     cvY += movement
+        //     cvH -= 2 * movement
+        //   } else {
+        //     const movement = (canvasSize / imgH) * ((imgH - imgW) / 2)
+        //     cvX += movement
+        //     cvW -= 2 * movement
+        //   }
+        // }
 
         const ctx = canvas.getContext('2d')
         ctx.drawImage(
@@ -99,7 +99,8 @@
           imgX, imgY, imgW, imgH,
           cvX, cvY, cvW, cvH
         )
-        this.objectDetection(canvas, imgX, imgY, imgW, imgH)
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        this.objectDetection(imageData, imgX, imgY, imgW, imgH)
         // return canvas
       },
 
@@ -114,7 +115,7 @@
         let scannerSize = srcWidth < srcHeight ? srcWidth : srcHeight
         let scannerLayer = 0
 
-        while (scannerSize > 32 && scannerLayer < 3) {
+        while (scannerSize > 32 && scannerLayer < 1) {
           let x = 0
           let y = 0
           let inputImgW = scannerSize
@@ -122,7 +123,7 @@
 
           for (y; y < srcHeight; y += scannerSize / 2) {
             x = 0
-            console.log(y)
+            // console.log(y)
             inputImgH = scannerSize
             if (y + scannerSize > srcHeight) {
               inputImgH = srcHeight - y
@@ -139,19 +140,19 @@
               // this.objectDetection(canvas, x, y, inputImgW, inputImgH)
             }
           }
-          console.log(scannerSize, scannerLayer)
+          // console.log(scannerSize, scannerLayer)
           scannerLayer++
           scannerSize /= 2
         }
       },
 
-      async objectDetection (canvas, x = null, y = null, width = null, height = null) {
-
-        const ctx = canvas.getContext('2d')
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      async objectDetection (imageData, x = null, y = null, width = null, height = null) {
+        console.log('obd', 1)
+        // const ctx = canvas.getContext('2d')
+        // const imageData = ctx.getImageData(0, 0, this.canvasSize, this.canvasSize)
         const output = await this.runModel(imageData)
         const result = output[0]
-        console.log(result.name)
+        console.log(result.name, result.probability)
 
         if (result.probability > 0.5) {
           this.items.push({ item_name: result.name, x: x, y: y, width: width, height: height })
@@ -160,6 +161,7 @@
 
       async runModel (imageData) {
         const start = new Date().getTime()
+        console.log('runModel', 2)
 
         // preprocess image data
         const preprocessedData = this.preprocess(imageData)
@@ -169,6 +171,7 @@
         const outputName = this.model.outputLayerNames[0]
         const inputData = { [inputName]: preprocessedData }
         const outputData = await this.model.predict(inputData)
+        console.log('runModel', outputData)
 
         let output = outputData[outputName]
         // console.log(output)
