@@ -7,7 +7,6 @@
 </template>
 
 <script>
-  /* eslint-disable */
   import ndarray from 'ndarray'
   import ops from 'ndarray-ops'
   // import loadImage from 'blueimp-load-image'
@@ -15,7 +14,6 @@
   import { imagenetClasses } from '../data/imagenet'
 
   const KerasJS = require('keras-js')
-  const async = require('async')
 
   let srcWidth = 0
   let srcHeight = 0
@@ -28,13 +26,12 @@
   export default {
     name: 'scan-image',
     data () {
-      let srcImg = new Image()
       return {
         modelFilePath: '/src/models/squeezenet_v1.1.bin',
         sampleImgPath: '/src/assets/sample-images/photo.jpg',
         canvasSize: 227,
         inputImgSize: 0,
-        model: null,
+        model: null
 
         // items: [], // store the result
 
@@ -47,46 +44,8 @@
     },
 
     mounted () {
-      const start = new Date().getTime()
       this.initModel()
       this.loadSrcImg(this.sampleImgPath)
-
-      const x = this.canvasSize
-      // let y = []
-      // y.push(function () {testX()})
-      // y.push(function () {console.log('this is function 2')})
-      //
-      async.parallel(
-        [
-          function (done) {
-            //处理逻辑
-            setTimeout(() => {
-              done(null, 'one');
-            }, 2000)
-          },
-          function (done) {
-            //处理逻辑
-            setTimeout(() => {
-              done(null, 'tow');
-            }, 4000)
-          },
-          function (done) {
-            //处理逻辑
-            done(null, 'three');
-          },
-          function (done) {
-            //处理逻辑
-            done(null, 'four');
-          }
-        ], function (error, result) {
-          const end = new Date().getTime()
-          // console.log('one:', result.one);
-          // console.log('two:', result.two);
-          // console.log('three:', result.three);
-          // console.log('four:', result.four);
-          console.log(end-start, result);
-        }
-      )
     },
 
     methods: {
@@ -99,8 +58,9 @@
         })
         await model.ready()
         isModelReady = true
-        if(isModelReady && isSrcImgReady)
+        if (isModelReady && isSrcImgReady) {
           document.getElementById('scan-button').disabled = false
+        }
       },
 
       loadSrcImg (imgPath) {
@@ -110,15 +70,16 @@
           srcWidth = srcImg.width
           srcHeight = srcImg.height
           isSrcImgReady = true
-          if(isModelReady && isSrcImgReady)
+          if (isModelReady && isSrcImgReady) {
             document.getElementById('scan-button').disabled = false
+          }
         }
       },
 
-      scan () {
+      async scan () {
         document.getElementById('scan-button').disabled = true
-        let subImgData = []
-        let detectionFunctionsParallel = []
+        // let subImgData = []
+        // let detectionFunctionsParallel = []
 
         const start = new Date().getTime()
         // original picture
@@ -131,14 +92,14 @@
           this.sampleImgPath, this.canvasSize,
           inputImgX, inputImgY, inputImgW, inputImgH
         )
-        // await objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
-        subImgData.push({
-          imgData: imageData,
-          imgX: inputImgX, imgY: inputImgY,
-          imgW: inputImgW, imgH: inputImgH
-        })
+        await objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
+        // subImgData.push({
+        //   imgData: imageData,
+        //   imgX: inputImgX, imgY: inputImgY,
+        //   imgW: inputImgW, imgH: inputImgH
+        // })
         // detectionFunctionsParallel.push(function () {
-        // objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
+        // await objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
         // })
 
         let scannerSize = srcWidth < srcHeight ? srcWidth : srcHeight
@@ -167,15 +128,15 @@
                 this.sampleImgPath, this.canvasSize,
                 inputImgX, inputImgY, inputImgW, inputImgH
               )
-              // await objectDetection(imageData, x, y, inputImgW, inputImgH)
+              await objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
               // detectionFunctionsParallel.push(function () {
-              // objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
+              // await objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
               // })
-              subImgData.push({
-                imgData: imageData,
-                imgX: inputImgX, imgY: inputImgY,
-                imgW: inputImgW, imgH: inputImgH
-              })
+              // subImgData.push({
+              //   imgData: imageData,
+              //   imgX: inputImgX, imgY: inputImgY,
+              //   imgW: inputImgW, imgH: inputImgH
+              // })
             }
           }
           scannerLayer++
@@ -185,15 +146,15 @@
         for (let i in items) {
           console.log(items[i].item_name)
         }
-        for (let i in subImgData) {
-          let data = subImgData[i]
-          console.log(data)
-          detectionFunctionsParallel.push(function (done) {
-            done(null, objectDetection(data.imgData, data.imgX, data.imgY, data.imgW, data.imgH))
-          })
-        }
-
-        async.parallel(detectionFunctionsParallel)
+        // for (let i in subImgData) {
+        //   let data = subImgData[i]
+        //   console.log(data)
+        //   detectionFunctionsParallel.push(async function () {
+        //     await objectDetection(data.imgData, data.imgX, data.imgY, data.imgW, data.imgH)
+        //   })
+        // }
+        //
+        // async.parallel(detectionFunctionsParallel)
 
         // subImgData.forEach(function (data) {
         //   objectDetection(data.imgData, data.imgX, data.imgY, data.imgW, data.imgH)
@@ -206,16 +167,12 @@
     }
   }
 
-  function testX() {
-    console.log("this is testX")
-    return "this is tt"
-  }
+  // function testX() {
+  //   console.log("this is testX")
+  //   return "this is tt"
+  // }
 
   async function objectDetection (imageData, x = null, y = null, width = null, height = null) {
-
-    // const ctx = canvas.getContext('2d')
-    // const imageData = ctx.getImageData(0, 0, this.canvasSize, this.canvasSize)
-    // console.log('obd', imageData, x, y, width, height)
     const output = await runModel(imageData)
     const result = output[0]
     console.log(result.name, result.probability)
