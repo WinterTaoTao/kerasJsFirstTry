@@ -23,6 +23,8 @@
   let model = null
   let items = []
 
+  // let detectors = []
+
   export default {
     name: 'scan-image',
     data () {
@@ -46,6 +48,12 @@
     mounted () {
       this.initModel()
       this.loadSrcImg(this.sampleImgPath)
+
+      this.$worker.run(() => {
+        return 'Hello, worker'
+      }).then(result => {
+        console.log(result)
+      })
     },
 
     methods: {
@@ -82,6 +90,7 @@
         // let detectionFunctionsParallel = []
 
         const start = new Date().getTime()
+        // let index = 0
         // original picture
         let inputImgX = 0
         let inputImgY = 0
@@ -92,7 +101,11 @@
           this.sampleImgPath, this.canvasSize,
           inputImgX, inputImgY, inputImgW, inputImgH
         )
-        await objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
+
+        this.$worker.run(function () {
+          objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
+        })
+        // await objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
         // subImgData.push({
         //   imgData: imageData,
         //   imgX: inputImgX, imgY: inputImgY,

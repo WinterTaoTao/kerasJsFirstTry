@@ -3,12 +3,18 @@ import ops from 'ndarray-ops'
 import _ from 'lodash'
 import { imagenetClasses } from '../../data/imagenet'
 
-async function runModel (model, imageData) {
+onmessage = async function (e) {
+  const d = e.data
+  let output = runModel(d.model, d.imgData)
+  this.postMessage(output)
+}
+
+async function runModel (model, imgData) {
   const start = new Date().getTime()
   // console.log('runModel', 2)
 
   // preprocess image data
-  const preprocessedData = preprocess(imageData)
+  const preprocessedData = preprocess(imgData)
   const inputName = model.inputLayerNames[0]
   const outputName = model.outputLayerNames[0]
   const inputData = { [inputName]: preprocessedData }
