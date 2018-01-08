@@ -47,19 +47,46 @@
     },
 
     mounted () {
+      const start = new Date().getTime()
       this.initModel()
       this.loadSrcImg(this.sampleImgPath)
+
       const x = this.canvasSize
-      async.parallel({
-        one: function () {
-          setTimeout(() => {
-            console.log(x)
-          }, 2000)
-        },
-        two: function () {
-          console.log(456)
+      // let y = []
+      // y.push(function () {testX()})
+      // y.push(function () {console.log('this is function 2')})
+      //
+      async.parallel(
+        [
+          function (done) {
+            //处理逻辑
+            setTimeout(() => {
+              done(null, 'one');
+            }, 2000)
+          },
+          function (done) {
+            //处理逻辑
+            setTimeout(() => {
+              done(null, 'tow');
+            }, 4000)
+          },
+          function (done) {
+            //处理逻辑
+            done(null, 'three');
+          },
+          function (done) {
+            //处理逻辑
+            done(null, 'four');
+          }
+        ], function (error, result) {
+          const end = new Date().getTime()
+          // console.log('one:', result.one);
+          // console.log('two:', result.two);
+          // console.log('three:', result.three);
+          // console.log('four:', result.four);
+          console.log(end-start, result);
         }
-      })
+      )
     },
 
     methods: {
@@ -88,43 +115,67 @@
         }
       },
 
-      async scan () {
+      scan () {
         document.getElementById('scan-button').disabled = true
+        let subImgData = []
+        let detectionFunctionsParallel = []
+
         const start = new Date().getTime()
         // original picture
+        let inputImgX = 0
+        let inputImgY = 0
+        let inputImgW = srcWidth
+        let inputImgH = srcHeight
+
         let imageData = insertNewCanva(
           this.sampleImgPath, this.canvasSize,
-          0, 0, srcWidth, srcHeight
+          inputImgX, inputImgY, inputImgW, inputImgH
         )
-        await objectDetection(imageData, 0, 0, srcWidth, srcHeight)
+        // await objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
+        subImgData.push({
+          imgData: imageData,
+          imgX: inputImgX, imgY: inputImgY,
+          imgW: inputImgW, imgH: inputImgH
+        })
+        // detectionFunctionsParallel.push(function () {
+        // objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
+        // })
 
         let scannerSize = srcWidth < srcHeight ? srcWidth : srcHeight
         let scannerLayer = 0
 
         // scan parts of picture
         while (scannerSize > 32 && scannerLayer < 1) {
-          let x = 0
-          let y = 0
-          let inputImgW = scannerSize
-          let inputImgH = scannerSize
+          inputImgX = 0
+          inputImgY = 0
+          inputImgW = scannerSize
+          inputImgH = scannerSize
 
-          for (y; y < srcHeight; y += scannerSize / 2) {
-            x = 0
+          for (inputImgY; inputImgY < srcHeight; inputImgY += scannerSize / 2) {
+            inputImgX = 0
             // console.log(y)
             inputImgH = scannerSize
-            if (y + scannerSize > srcHeight) {
-              inputImgH = srcHeight - y
+            if (inputImgY + scannerSize > srcHeight) {
+              inputImgH = srcHeight - inputImgY
             }
-            for (x; x < srcWidth; x += scannerSize / 2) {
+            for (inputImgX; inputImgX < srcWidth; inputImgX += scannerSize / 2) {
               inputImgW = scannerSize
-              if (x + scannerSize > srcWidth) {
-                inputImgW = srcWidth - x
+              if (inputImgX + scannerSize > srcWidth) {
+                inputImgW = srcWidth - inputImgX
               }
               imageData = insertNewCanva(
                 this.sampleImgPath, this.canvasSize,
-                x, y, inputImgW, inputImgH
+                inputImgX, inputImgY, inputImgW, inputImgH
               )
-              await objectDetection(imageData, x, y, inputImgW, inputImgH)
+              // await objectDetection(imageData, x, y, inputImgW, inputImgH)
+              // detectionFunctionsParallel.push(function () {
+              // objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
+              // })
+              subImgData.push({
+                imgData: imageData,
+                imgX: inputImgX, imgY: inputImgY,
+                imgW: inputImgW, imgH: inputImgH
+              })
             }
           }
           scannerLayer++
@@ -134,6 +185,19 @@
         for (let i in items) {
           console.log(items[i].item_name)
         }
+        for (let i in subImgData) {
+          let data = subImgData[i]
+          console.log(data)
+          detectionFunctionsParallel.push(function (done) {
+            done(null, objectDetection(data.imgData, data.imgX, data.imgY, data.imgW, data.imgH))
+          })
+        }
+
+        async.parallel(detectionFunctionsParallel)
+
+        // subImgData.forEach(function (data) {
+        //   objectDetection(data.imgData, data.imgX, data.imgY, data.imgW, data.imgH)
+        // })
 
         const end = new Date().getTime()
         console.log('Total Scan Time: ', end - start, 'ms')
@@ -142,18 +206,23 @@
     }
   }
 
+  function testX() {
+    console.log("this is testX")
+    return "this is tt"
+  }
+
   async function objectDetection (imageData, x = null, y = null, width = null, height = null) {
 
     // const ctx = canvas.getContext('2d')
     // const imageData = ctx.getImageData(0, 0, this.canvasSize, this.canvasSize)
-    // console.log('obd', imageData)
+    // console.log('obd', imageData, x, y, width, height)
     const output = await runModel(imageData)
     const result = output[0]
     console.log(result.name, result.probability)
 
     if (result.probability > 0.5) {
       items.push({ item_name: result.name, x: x, y: y, width: width, height: height })
-      // console.log(this.items.item_name)
+      // console.log(result.name, result.probability)
     }
   }
 
@@ -168,6 +237,7 @@
     const inputData = { [inputName]: preprocessedData }
 
     // recognize
+    // console.log(inputData)
     const outputData = await model.predict(inputData)
 
     let output = outputData[outputName]
