@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-import ScanImage from '../components/ScanImage.js'
+import ScanImage from '../components/ScanImage'
 
 Vue.use(Router)
 
