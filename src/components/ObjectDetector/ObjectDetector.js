@@ -1,7 +1,7 @@
-import ndarray from 'ndarray'
-import ops from 'ndarray-ops'
-import _ from 'lodash'
-import { imagenetClasses } from '../../data/imagenet'
+self.importScripts('/node_modules/ndarray/ndarray.js')
+// import ops from 'ndarray-ops'
+// import _ from 'lodash'
+// import { imagenetClasses } from '../../data/imagenet'
 
 onmessage = async function (e) {
   const d = e.data

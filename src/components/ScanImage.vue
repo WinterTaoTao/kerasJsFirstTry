@@ -23,6 +23,8 @@
   let model = null
   let items = []
 
+  // let index = 0
+
   // let detectors = []
 
   export default {
@@ -48,12 +50,6 @@
     mounted () {
       this.initModel()
       this.loadSrcImg(this.sampleImgPath)
-
-      this.$worker.run(() => {
-        return 'Hello, worker'
-      }).then(result => {
-        console.log(result)
-      })
     },
 
     methods: {
@@ -97,14 +93,48 @@
         let inputImgW = srcWidth
         let inputImgH = srcHeight
 
+        // let detectors = []
+
         let imageData = insertNewCanva(
           this.sampleImgPath, this.canvasSize,
           inputImgX, inputImgY, inputImgW, inputImgH
         )
 
-        this.$worker.run(function () {
-          objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
-        })
+        // let worker = new Worker(function () {
+        //   postMessage("I'm working before postMessage('ali').")
+        //   this.onmessage = function (event) {
+        //     postMessage('Hi ' + event.data)
+        //     self.close()
+        //   }
+        // })
+        // worker.postMessage('ali')
+        // worker.onmessage = function (e) {
+        //   console.log(e.data)
+        // }
+
+        // detectors.push(new Worker('/src/components/ObjectDetector/ObjectDetector.js'))
+        // const modelJ = JSON.parse(JSON.stringify(model))
+        // detectors[0].postMessage({model: modelJ, imgData: imageData})
+        // detectors[0].onmessage = function (e) {
+        //   const output = e.data
+        //   console.log(output[0].name)
+        // }
+
+        // index++
+        // this.$worker.run((arg) => {
+        //   return arg
+        // }, [imageData]).then(
+        //   async function (result) {
+        //     console.log(index)
+        //     await objectDetection(result, inputImgX, inputImgY, inputImgW, inputImgH)
+        //     index--
+        //     if (index === 0) {
+        //       const end = new Date().getTime()
+        //       console.log('Total Scan Time: ', index, end - start, 'ms')
+        //       document.getElementById('scan-button').disabled = false
+        //     }
+        //   })
+
         // await objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
         // subImgData.push({
         //   imgData: imageData,
@@ -119,7 +149,7 @@
         let scannerLayer = 0
 
         // scan parts of picture
-        while (scannerSize > 32 && scannerLayer < 1) {
+        while (scannerSize > 32 && scannerLayer < 2) {
           inputImgX = 0
           inputImgY = 0
           inputImgW = scannerSize
@@ -141,6 +171,24 @@
                 this.sampleImgPath, this.canvasSize,
                 inputImgX, inputImgY, inputImgW, inputImgH
               )
+
+              // if (index < 27) {
+              //   index++
+              //   this.$worker.run((arg) => {
+              //     return arg
+              //   }, [imageData]).then(
+              //     async function (result) {
+              //       console.log(index)
+              //       await objectDetection(result, inputImgX, inputImgY, inputImgW, inputImgH)
+              //       index--
+              //       if (index === 0) {
+              //         const end = new Date().getTime()
+              //         console.log('Total Scan Time: ', end - start, 'ms')
+              //         document.getElementById('scan-button').disabled = false
+              //       }
+              //     })
+              // }
+
               await objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
               // detectionFunctionsParallel.push(function () {
               // await objectDetection(imageData, inputImgX, inputImgY, inputImgW, inputImgH)
@@ -180,9 +228,9 @@
     }
   }
 
-  // function testX() {
-  //   console.log("this is testX")
-  //   return "this is tt"
+  // function testX () {
+  //   console.log('this is testX')
+  //   return 'this is tt'
   // }
 
   async function objectDetection (imageData, x = null, y = null, width = null, height = null) {
@@ -191,7 +239,14 @@
     console.log(result.name, result.probability)
 
     if (result.probability > 0.5) {
-      items.push({ item_name: result.name, x: x, y: y, width: width, height: height })
+      items.push({
+        item_name: result.name,
+        probability: result.probability,
+        x: x,
+        y: y,
+        width: width,
+        height: height
+      })
       // console.log(result.name, result.probability)
     }
   }
@@ -242,6 +297,21 @@
     )
     return ctx.getImageData(0, 0, canvasSize, canvasSize)
   }
+
+  // function filter () {
+  //   if (items.length > 1) {
+  //     const lastItem = items[items.length - 1]
+  //     const name = lastItem.item_name
+  //     const x = lastItem.x
+  //     const y = lastItem.y
+  //     const width = lastItem.width
+  //     const height = lastItem.height
+  //
+  //     for (let index in items) {
+  //       const compareItem = item[index]
+  //     }
+  //   }
+  // }
 
   function preprocess (imageData) {
     const {data, width, height} = imageData
