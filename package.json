@@ -16,7 +16,6 @@
   "dependencies": {
     "async": "^2.6.0",
     "blueimp-load-image": "^2.17.1",
-    "cluster": "^0.7.7",
     "keras-js": "^1.0.2",
     "ndarray": "^1.0.18",
     "ndarray-ops": "^1.2.2",

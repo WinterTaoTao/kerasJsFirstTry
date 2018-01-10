@@ -26,7 +26,14 @@
         model: null,
         srcImg: new Image(),
         items: [],
-        index: 0
+        index: 0,
+
+        position: {
+          INDEPENDENT: 0,
+          INTERSECTION: 1,
+          CONTAINED: 2,
+          CONTAIN: 3
+        }
       }
     },
 
@@ -72,7 +79,8 @@
             height: height
           }
 
-          this.items.push(item)
+          // this.items.push(item)
+          this.addItem(item)
         }
       },
 
@@ -105,7 +113,7 @@
         let scannerLayer = 0
 
         // scan parts of picture
-        while (scannerSize > 32 && scannerLayer < 3) {
+        while (scannerSize > 32 && scannerLayer < 1) {
           inputImgX = 0
           inputImgY = 0
           inputImgW = scannerSize
@@ -247,6 +255,70 @@
         })
 
         return topK
+      },
+
+      async addItem (item) {
+        let shouldAdd = true
+        for (let index = 0; index < this.items.length; index++) {
+          const compareItem = this.items[index]
+          const itemName = item.item_name
+          const _itemName = compareItem.item_name
+
+          if (itemName === _itemName) {
+            const probability = item.probability
+            const _probability = compareItem.probability
+            const pos = this.positionRelationship(item, compareItem)
+
+            if (pos === this.position.CONTAINED || pos === this.position.CONTAIN) {
+              console.log('contain')
+              if (probability >= _probability) {
+                this.items.slice(index, 1)
+                index--
+              } else {
+                shouldAdd = false
+              }
+            } else if (pos === this.position.INTERSECTION) {
+              console.log('intersection')
+              // detect intersection part
+              const intersectionX = Math.max(item.x, compareItem.x)
+              const intersectionY = Math.max(item.y, compareItem.y)
+              const intersectionW = Math.min(item.x + item.width, compareItem.x + compareItem.width) - intersectionX
+              const intersectionH = Math.min(item.y + item.height, compareItem.y + compareItem.height) - intersectionY
+              await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
+
+              // detect union part
+              const unionX = Math.min(item.x, compareItem.x)
+              const unionY = Math.min(item.y, compareItem.y)
+              const unionW = Math.max(item.x + item.width, compareItem.x + compareItem.width) - unionX
+              const unionH = Math.max(item.y + item.height, compareItem.y + compareItem.height) - unionY
+              await this.objectDetection(unionX, unionY, unionW, unionH)
+            }
+          }
+        }
+        if (shouldAdd) {
+          this.items.push(item)
+        }
+      },
+
+      positionRelationship (item, compareItem) {
+        const xStart = item.x
+        const yStart = item.y
+        const xEnd = xStart + item.width
+        const yEnd = yStart + item.height
+        const _xStart = compareItem.x
+        const _yStart = compareItem.y
+        const _xEnd = _xStart + compareItem.width
+        const _yEnd = _yStart + compareItem.height
+
+        if (xStart >= _xEnd || yStart >= _yEnd || _xStart >= xEnd || _yStart >= yEnd) {
+          return this.position.INDEPENDENT // two independent items
+        } else if (xStart >= _xStart && yStart >= _yStart && xEnd <= _xEnd && yEnd <= _yEnd) {
+          return this.position.CONTAINED // item is contained by compareItem
+        } else if (xStart <= _xStart && yStart <= _yStart && xEnd >= _xEnd && yEnd >= _yEnd) {
+          return this.position.CONTAIN // item contains compareItem
+        } else {
+          return this.position.INTERSECTION // two intersection items
+        }
       }
     }
   }
