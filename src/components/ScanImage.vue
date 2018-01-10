@@ -76,6 +76,10 @@
         }
       },
 
+      // testX (arg) {
+      //   console.log(arg)
+      // },
+
       async scan () {
         const start = new Date().getTime()
 
@@ -87,11 +91,13 @@
         let inputImgW = srcImgWidth
         let inputImgH = srcImgHeight
 
+        // let testX = function (arg) {
+        //   console.log(inputImgW)
+        // }
+
         // this.index++
         // this.$worker.run(
-        //   function () {
-        //     // await this.objectDetection(0, 0, this.srcImg.width, this.srcImg.height)
-        //   }
+        //   (arg) => console.log(arg), [inputImgW]
         // )
         await this.objectDetection(inputImgX, inputImgY, inputImgW, inputImgH)
 
@@ -99,7 +105,7 @@
         let scannerLayer = 0
 
         // scan parts of picture
-        while (scannerSize > 32 && scannerLayer < 1) {
+        while (scannerSize > 32 && scannerLayer < 3) {
           inputImgX = 0
           inputImgY = 0
           inputImgW = scannerSize
