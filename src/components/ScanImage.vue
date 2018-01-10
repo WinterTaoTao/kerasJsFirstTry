@@ -1,6 +1,12 @@
 <template>
   <div>
     <a href="#/objectDetection">Object Detection Demo</a><br/>
+
+    <div style="text-align: left">
+      <div id="rectangle"></div>
+      <img v-bind:src="sampleImgPath">
+    </div>
+
     <button id="scan-button" @click="scan">Scan</button><br/>
     <div id="scan-img-root"></div>
   </div>
@@ -26,7 +32,6 @@
         model: null,
         srcImg: new Image(),
         items: [],
-        index: 0,
 
         position: {
           INDEPENDENT: 0,
@@ -84,11 +89,13 @@
         }
       },
 
-      // testX (arg) {
-      //   console.log(arg)
-      // },
-
       async scan () {
+        this.items = []
+        let myNode = document.getElementById('scan-img-root')
+        while (myNode.firstChild) {
+          myNode.removeChild(myNode.firstChild)
+        }
+
         const start = new Date().getTime()
 
         // original picture
@@ -99,21 +106,17 @@
         let inputImgW = srcImgWidth
         let inputImgH = srcImgHeight
 
-        // let testX = function (arg) {
-        //   console.log(inputImgW)
-        // }
-
-        // this.index++
         // this.$worker.run(
         //   (arg) => console.log(arg), [inputImgW]
         // )
+
         await this.objectDetection(inputImgX, inputImgY, inputImgW, inputImgH)
 
         let scannerSize = srcImgWidth < srcImgHeight ? srcImgWidth : srcImgHeight
         let scannerLayer = 0
 
         // scan parts of picture
-        while (scannerSize > 32 && scannerLayer < 1) {
+        while (scannerSize > 32 && scannerLayer < 2) {
           inputImgX = 0
           inputImgY = 0
           inputImgW = scannerSize
@@ -134,15 +137,6 @@
                 inputImgW = srcImgWidth - inputImgX
               }
 
-              this.index++
-              // if (this.index < 27) {
-              //   this.$worker.run(
-              //     function () {
-              //       console.log('THIS', this)
-              //       // await this.objectDetection(inputImgX, inputImgY, inputImgW, inputImgH)
-              //     }
-              //   )
-              // }
               await this.objectDetection(inputImgX, inputImgY, inputImgW, inputImgH)
             }
           }
@@ -152,7 +146,7 @@
         }
 
         for (let i in this.items) {
-          console.log(this.items[i].item_name)
+          console.log(this.items[i].item_name, this.items[i].probability)
         }
 
         const end = new Date().getTime()
@@ -269,30 +263,31 @@
             const _probability = compareItem.probability
             const pos = this.positionRelationship(item, compareItem)
 
-            if (pos === this.position.CONTAINED || pos === this.position.CONTAIN) {
+            if (pos === this.position.CONTAINED || pos === this.position.CONTAIN || pos === this.position.INTERSECTION) {
               console.log('contain')
               if (probability >= _probability) {
-                this.items.slice(index, 1)
+                this.items.splice(index, 1)
                 index--
               } else {
                 shouldAdd = false
               }
-            } else if (pos === this.position.INTERSECTION) {
-              console.log('intersection')
-              // detect intersection part
-              const intersectionX = Math.max(item.x, compareItem.x)
-              const intersectionY = Math.max(item.y, compareItem.y)
-              const intersectionW = Math.min(item.x + item.width, compareItem.x + compareItem.width) - intersectionX
-              const intersectionH = Math.min(item.y + item.height, compareItem.y + compareItem.height) - intersectionY
-              await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
-
-              // detect union part
-              const unionX = Math.min(item.x, compareItem.x)
-              const unionY = Math.min(item.y, compareItem.y)
-              const unionW = Math.max(item.x + item.width, compareItem.x + compareItem.width) - unionX
-              const unionH = Math.max(item.y + item.height, compareItem.y + compareItem.height) - unionY
-              await this.objectDetection(unionX, unionY, unionW, unionH)
             }
+            // } else if (pos === this.position.INTERSECTION) {
+            //   console.log('intersection')
+            //   // detect intersection part
+            //   const intersectionX = Math.max(item.x, compareItem.x)
+            //   const intersectionY = Math.max(item.y, compareItem.y)
+            //   const intersectionW = Math.min(item.x + item.width, compareItem.x + compareItem.width) - intersectionX
+            //   const intersectionH = Math.min(item.y + item.height, compareItem.y + compareItem.height) - intersectionY
+            //   await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
+            //
+            //   // detect union part
+            //   const unionX = Math.min(item.x, compareItem.x)
+            //   const unionY = Math.min(item.y, compareItem.y)
+            //   const unionW = Math.max(item.x + item.width, compareItem.x + compareItem.width) - unionX
+            //   const unionH = Math.max(item.y + item.height, compareItem.y + compareItem.height) - unionY
+            //   await this.objectDetection(unionX, unionY, unionW, unionH)
+            // }
           }
         }
         if (shouldAdd) {
@@ -323,3 +318,12 @@
     }
   }
 </script>
+
+<style>
+  #rectangle {
+    width: 200px;
+    height: 200px;
+    border: 4px solid black;
+    position: absolute;
+  }
+</style>
