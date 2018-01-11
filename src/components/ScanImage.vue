@@ -2,9 +2,9 @@
   <div>
     <a href="#/objectDetection">Object Detection Demo</a><br/>
 
-    <div style="text-align: left">
-      <div id="rectangle"></div>
-      <img v-bind:src="sampleImgPath">
+    <div id="src-img-div">
+      <img id="src-img" v-bind:src="sampleImgPath" style="position: absolute">
+      <!--<div id="rectangle"></div>-->
     </div>
 
     <button id="scan-button" @click="scan">Scan</button><br/>
@@ -43,8 +43,17 @@
     },
 
     mounted () {
-      this.initModel()
       this.srcImg.src = this.sampleImgPath
+      let img = this.srcImg
+
+      img.onload = function () {
+        let srcImgDiv = document.getElementById('src-img-div')
+        srcImgDiv.style.width = img.width + 'px'
+        srcImgDiv.style.height = img.height + 'px'
+        console.log(img.width, img.height)
+      }
+
+      this.initModel()
     },
 
     methods: {
@@ -146,7 +155,25 @@
         }
 
         for (let i in this.items) {
-          console.log(this.items[i].item_name, this.items[i].probability)
+          let item = this.items[i]
+          console.log(item.item_name, item.probability)
+
+          const objectRectangles = document.createElement('canvas')
+          const file = document.getElementById('src-img-div')
+
+          file.appendChild(objectRectangles)
+          objectRectangles.className = 'object-rectangles'
+
+          objectRectangles.style.width = item.width + 'px'
+          objectRectangles.style.height = item.height + 'px'
+          objectRectangles.style.left = item.x + 'px'
+          objectRectangles.style.top = item.y + 'px'
+          objectRectangles.style.borderColor = 'rgb(' + Math.floor(i / this.items.length * 255) + ',' +
+            Math.floor(item.x / this.srcImg.width * 255) + ', ' +
+            Math.floor(item.y / this.srcImg.height * 255) + ')'
+
+          console.log('rgb(' + Math.floor(item.x / this.srcImg.width * 255) + ', 0 ' +
+            Math.floor(item.y / this.srcImg.height * 255) + ')')
         }
 
         const end = new Date().getTime()
@@ -194,8 +221,8 @@
         canvas.className = 'scanned-imgs'
         canvas.width = canvasSize
         canvas.height = canvasSize
-        canvas.style.margin = '5px'
-        canvas.style.border = '1px solid darkred'
+        // canvas.style.margin = '5px'
+        // canvas.style.border = '1px solid darkred'
 
         const ctx = canvas.getContext('2d')
 
@@ -263,7 +290,7 @@
             const _probability = compareItem.probability
             const pos = this.positionRelationship(item, compareItem)
 
-            if (pos === this.position.CONTAINED || pos === this.position.CONTAIN || pos === this.position.INTERSECTION) {
+            if (pos === this.position.CONTAINED || pos === this.position.CONTAIN) {
               console.log('contain')
               if (probability >= _probability) {
                 this.items.splice(index, 1)
@@ -271,23 +298,23 @@
               } else {
                 shouldAdd = false
               }
-            }
-            // } else if (pos === this.position.INTERSECTION) {
-            //   console.log('intersection')
-            //   // detect intersection part
-            //   const intersectionX = Math.max(item.x, compareItem.x)
-            //   const intersectionY = Math.max(item.y, compareItem.y)
-            //   const intersectionW = Math.min(item.x + item.width, compareItem.x + compareItem.width) - intersectionX
-            //   const intersectionH = Math.min(item.y + item.height, compareItem.y + compareItem.height) - intersectionY
-            //   await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
-            //
-            //   // detect union part
-            //   const unionX = Math.min(item.x, compareItem.x)
-            //   const unionY = Math.min(item.y, compareItem.y)
-            //   const unionW = Math.max(item.x + item.width, compareItem.x + compareItem.width) - unionX
-            //   const unionH = Math.max(item.y + item.height, compareItem.y + compareItem.height) - unionY
-            //   await this.objectDetection(unionX, unionY, unionW, unionH)
             // }
+            } else if (pos === this.position.INTERSECTION) {
+              console.log('intersection')
+              // detect intersection part
+              const intersectionX = Math.max(item.x, compareItem.x)
+              const intersectionY = Math.max(item.y, compareItem.y)
+              const intersectionW = Math.min(item.x + item.width, compareItem.x + compareItem.width) - intersectionX
+              const intersectionH = Math.min(item.y + item.height, compareItem.y + compareItem.height) - intersectionY
+              await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
+
+              // detect union part
+              const unionX = Math.min(item.x, compareItem.x)
+              const unionY = Math.min(item.y, compareItem.y)
+              const unionW = Math.max(item.x + item.width, compareItem.x + compareItem.width) - unionX
+              const unionH = Math.max(item.y + item.height, compareItem.y + compareItem.height) - unionY
+              await this.objectDetection(unionX, unionY, unionW, unionH)
+            }
           }
         }
         if (shouldAdd) {
@@ -320,10 +347,25 @@
 </script>
 
 <style>
-  #rectangle {
+  #src-img-div {
+    width: 800px;
+    height: 800px;
+    text-align: left;
+    padding: 0;
+    border: 2px solid darkred;
+    position:relative;
+  }
+
+  .scanned-imgs {
+    margin: 5px;
+    border: 1px solid red;
+  }
+
+  .object-rectangles {
     width: 200px;
     height: 200px;
-    border: 4px solid black;
+    border: 3px solid darkred;
     position: absolute;
+    z-index: 1;
   }
 </style>
