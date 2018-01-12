@@ -4,7 +4,6 @@
 
     <div id="src-img-div">
       <img id="src-img" v-bind:src="sampleImgPath" style="position: absolute">
-      <!--<div id="rectangle"></div>-->
     </div>
 
     <button id="scan-button" @click="scan">Scan</button><br/>
@@ -50,7 +49,7 @@
         let srcImgDiv = document.getElementById('src-img-div')
         srcImgDiv.style.width = img.width + 'px'
         srcImgDiv.style.height = img.height + 'px'
-        console.log(img.width, img.height)
+        // console.log(img.width, img.height)
       }
 
       this.initModel()
@@ -70,6 +69,14 @@
       },
 
       async objectDetection (x, y, width, height) {
+        // if (width > height) {
+        //   y -= (width - height) / 2
+        //   y = Math.max(0, y)
+        // } else if (width < height) {
+        //   x -= (height - width) / 2
+        //   x = Math.max(0, x)
+        // }
+
         let imageData = this.insertNewCanvas(
           this.canvasSize,
           x,
@@ -78,13 +85,14 @@
           height
         )
 
+        let item = null
         const output = await this.runModel(imageData)
         const result = output[0]
 
         console.log(result.name, result.probability)
 
-        if (result.probability > 0.5) {
-          const item = {
+        if (result.probability > 0.8) {
+          item = {
             item_name: result.name,
             probability: result.probability,
             x: x,
@@ -96,6 +104,8 @@
           // this.items.push(item)
           this.addItem(item)
         }
+
+        return item
       },
 
       async scan () {
@@ -125,13 +135,11 @@
         let scannerLayer = 0
 
         // scan parts of picture
-        while (scannerSize > 32 && scannerLayer < 2) {
-          inputImgX = 0
+        while (scannerSize > 32 && scannerLayer < 3) {
           inputImgY = 0
-          inputImgW = scannerSize
-          inputImgH = scannerSize
+          let stepSize = scannerSize / 2
 
-          for (inputImgY; inputImgY < srcImgHeight; inputImgY += scannerSize / 2) {
+          for (inputImgY; inputImgY < srcImgHeight; inputImgY += stepSize) {
             inputImgX = 0
             inputImgH = scannerSize
 
@@ -139,7 +147,7 @@
               inputImgH = srcImgHeight - inputImgY
             }
 
-            for (inputImgX; inputImgX < srcImgWidth; inputImgX += scannerSize / 2) {
+            for (inputImgX; inputImgX < srcImgWidth; inputImgX += stepSize) {
               inputImgW = scannerSize
 
               if (inputImgX + scannerSize > srcImgWidth) {
@@ -158,22 +166,35 @@
           let item = this.items[i]
           console.log(item.item_name, item.probability)
 
-          const objectRectangles = document.createElement('canvas')
+          const objectRectangles = document.createElement('div')
+          const objectText = document.createElement('span')
           const file = document.getElementById('src-img-div')
 
+          objectRectangles.appendChild(objectText)
           file.appendChild(objectRectangles)
           objectRectangles.className = 'object-rectangles'
+
+          objectText.innerText = item.item_name + ' ' + item.probability
 
           objectRectangles.style.width = item.width + 'px'
           objectRectangles.style.height = item.height + 'px'
           objectRectangles.style.left = item.x + 'px'
           objectRectangles.style.top = item.y + 'px'
-          objectRectangles.style.borderColor = 'rgb(' + Math.floor(i / this.items.length * 255) + ',' +
-            Math.floor(item.x / this.srcImg.width * 255) + ', ' +
-            Math.floor(item.y / this.srcImg.height * 255) + ')'
 
-          console.log('rgb(' + Math.floor(item.x / this.srcImg.width * 255) + ', 0 ' +
-            Math.floor(item.y / this.srcImg.height * 255) + ')')
+          const r = Math.floor(i / this.items.length * 255)
+          const g = Math.floor(item.x / this.srcImg.width * 255)
+          const b = Math.floor(item.y / this.srcImg.height * 255)
+          const backColor = 'rgb(' + r + ',' +
+            g + ', ' +
+            b + ')'
+
+          const textColor = 'rgb(' + (255 - r) + ',' +
+            (255 - g) + ', ' +
+            (255 - b) + ')'
+
+          objectRectangles.style.borderColor = backColor
+          objectText.style.backgroundColor = backColor
+          objectText.style.color = textColor
         }
 
         const end = new Date().getTime()
@@ -207,11 +228,7 @@
         imgX = 0,
         imgY = 0,
         imgW = canvasSize,
-        imgH = canvasSize,
-        cvX = 0,
-        cvY = 0,
-        cvW = canvasSize,
-        cvH = canvasSize
+        imgH = canvasSize
       ) {
         // create a new canvas
         const canvas = document.createElement('canvas')
@@ -221,21 +238,44 @@
         canvas.className = 'scanned-imgs'
         canvas.width = canvasSize
         canvas.height = canvasSize
+        // canvas.style.backgroundColor = 'rgb(123, 456, 789)'
         // canvas.style.margin = '5px'
         // canvas.style.border = '1px solid darkred'
+        let cvX = 0
+        let cvY = 0
+        let cvW = canvasSize
+        let cvH = canvasSize
+        // if (imgW > imgH) {
+        //   imgY -= (imgW - imgH) / 2
+        //   imgY = Math.max(0, imgY)
+        // } else if (imgW < imgH) {
+        //   imgX -= (imgH - imgW) / 2
+        //   imgX = Math.max(0, imgX)
+        // }
+        // if (imgW > imgH) {
+        //   cvH = canvasSize * (imgH / imgW)
+        //   cvY += (canvasSize - cvH) / 2
+        // } else if (imgW < imgH) {
+        //   cvW = canvasSize * (imgW / imgH)
+        //   cvX += (canvasSize - cvW) / 2
+        // }
 
         const ctx = canvas.getContext('2d')
-
+        ctx.fillStyle = 'black'
         ctx.drawImage(
           this.srcImg,
           imgX,
           imgY,
           imgW,
           imgH,
-          cvX = 0,
-          cvY = 0,
-          cvW = canvasSize,
-          cvH = canvasSize
+          cvX,
+          cvY,
+          cvW,
+          cvH
+          // 0,
+          // 0,
+          // canvasSize,
+          // canvasSize
         )
 
         return ctx.getImageData(0, 0, canvasSize, canvasSize)
@@ -291,7 +331,9 @@
             const pos = this.positionRelationship(item, compareItem)
 
             if (pos === this.position.CONTAINED || pos === this.position.CONTAIN) {
-              console.log('contain')
+              // console.log('contain')
+              // this.items.splice(index, 1)
+              // index--
               if (probability >= _probability) {
                 this.items.splice(index, 1)
                 index--
@@ -300,7 +342,11 @@
               }
             // }
             } else if (pos === this.position.INTERSECTION) {
-              console.log('intersection')
+              if (shouldAdd) {
+                this.items.push(item)
+                shouldAdd = false
+              }
+              // console.log('intersection')
               // detect intersection part
               const intersectionX = Math.max(item.x, compareItem.x)
               const intersectionY = Math.max(item.y, compareItem.y)
@@ -350,6 +396,7 @@
   #src-img-div {
     width: 800px;
     height: 800px;
+    margin-left: 50px;
     text-align: left;
     padding: 0;
     border: 2px solid darkred;
