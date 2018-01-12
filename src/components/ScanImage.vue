@@ -25,12 +25,14 @@
     data: function () {
       return {
         modelFilePath: '/src/models/squeezenet_v1.1.bin',
-        sampleImgPath: '/src/assets/sample-images/photo.jpg',
+        sampleImgPath: '/src/assets/sample-images/photo5.jpg',
         canvasSize: 227,
         inputImgSize: 0,
         model: null,
         srcImg: new Image(),
         items: [],
+        threshold1: 0.5,
+        threshold2: 0.8,
 
         position: {
           INDEPENDENT: 0,
@@ -91,7 +93,7 @@
 
         console.log(result.name, result.probability)
 
-        if (result.probability > 0.8) {
+        if (result.probability > this.threshold1) {
           item = {
             item_name: result.name,
             probability: result.probability,
@@ -162,39 +164,45 @@
           scannerSize /= 2
         }
 
-        for (let i in this.items) {
-          let item = this.items[i]
-          console.log(item.item_name, item.probability)
+        for (let index = 0; index < this.items.length; index++) {
+          let item = this.items[index]
 
-          const objectRectangles = document.createElement('div')
-          const objectText = document.createElement('span')
-          const file = document.getElementById('src-img-div')
+          if (item.probability > this.threshold2) {
+            console.log(item.item_name, item.probability)
 
-          objectRectangles.appendChild(objectText)
-          file.appendChild(objectRectangles)
-          objectRectangles.className = 'object-rectangles'
+            const objectRectangles = document.createElement('div')
+            const objectText = document.createElement('span')
+            const file = document.getElementById('src-img-div')
 
-          objectText.innerText = item.item_name + ' ' + item.probability
+            objectRectangles.appendChild(objectText)
+            file.appendChild(objectRectangles)
+            objectRectangles.className = 'object-rectangles'
 
-          objectRectangles.style.width = item.width + 'px'
-          objectRectangles.style.height = item.height + 'px'
-          objectRectangles.style.left = item.x + 'px'
-          objectRectangles.style.top = item.y + 'px'
+            objectText.innerText = item.item_name + ' ' + item.probability
 
-          const r = Math.floor(i / this.items.length * 255)
-          const g = Math.floor(item.x / this.srcImg.width * 255)
-          const b = Math.floor(item.y / this.srcImg.height * 255)
-          const backColor = 'rgb(' + r + ',' +
-            g + ', ' +
-            b + ')'
+            objectRectangles.style.width = item.width + 'px'
+            objectRectangles.style.height = item.height + 'px'
+            objectRectangles.style.left = item.x + 'px'
+            objectRectangles.style.top = item.y + 'px'
 
-          const textColor = 'rgb(' + (255 - r) + ',' +
-            (255 - g) + ', ' +
-            (255 - b) + ')'
+            const r = Math.floor(index / this.items.length * 255)
+            const g = Math.floor(item.x / this.srcImg.width * 255)
+            const b = Math.floor(item.y / this.srcImg.height * 255)
+            const backColor = 'rgba(' + r + ',' +
+              g + ', ' +
+              b + ', 0.5)'
 
-          objectRectangles.style.borderColor = backColor
-          objectText.style.backgroundColor = backColor
-          objectText.style.color = textColor
+            const textColor = 'rgb(' + (255 - r) + ',' +
+              (255 - g) + ', ' +
+              (255 - b) + ')'
+
+            objectRectangles.style.borderColor = backColor
+            objectText.style.backgroundColor = backColor
+            objectText.style.color = textColor
+          } else {
+            this.items.splice(index, 1)
+            index = index - 1
+          }
         }
 
         const end = new Date().getTime()
@@ -261,7 +269,6 @@
         // }
 
         const ctx = canvas.getContext('2d')
-        ctx.fillStyle = 'black'
         ctx.drawImage(
           this.srcImg,
           imgX,
@@ -394,12 +401,12 @@
 
 <style>
   #src-img-div {
-    width: 800px;
-    height: 800px;
+    /*width: 800px;*/
+    /*height: 800px;*/
     margin-left: 50px;
     text-align: left;
     padding: 0;
-    border: 2px solid darkred;
+    /*border: 2px solid darkred;*/
     position:relative;
   }
 
