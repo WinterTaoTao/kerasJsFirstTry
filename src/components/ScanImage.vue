@@ -17,15 +17,17 @@
   import _ from 'lodash'
   import { imagenetClasses } from '../data/imagenet'
 
-  const KerasJS = require('keras-js')
+  // const KerasJS = require('keras-js')
 
   export default {
     name: 'scan-image',
 
     data: function () {
       return {
+        KerasJS: require('keras-js'),
+
         modelFilePath: '/src/models/squeezenet_v1.1.bin',
-        sampleImgPath: '/src/assets/sample-images/photo5.jpg',
+        sampleImgPath: '/src/assets/sample-images/photo.jpg',
         canvasSize: 227,
         inputImgSize: 0,
         model: null,
@@ -51,7 +53,6 @@
         let srcImgDiv = document.getElementById('src-img-div')
         srcImgDiv.style.width = img.width + 'px'
         srcImgDiv.style.height = img.height + 'px'
-        // console.log(img.width, img.height)
       }
 
       this.initModel()
@@ -60,7 +61,7 @@
     methods: {
       async initModel () {
         document.getElementById('scan-button').disabled = true
-        this.model = new KerasJS.Model({
+        this.model = new this.KerasJS.Model({
           filepath: this.modelFilePath,
           gpu: true,
           filesystem: true
@@ -91,7 +92,7 @@
         const output = await this.runModel(imageData)
         const result = output[0]
 
-        console.log(result.name, result.probability)
+        console.log(result.name, result.probability, x, y, width, height)
 
         if (result.probability > this.threshold1) {
           item = {
@@ -103,8 +104,7 @@
             height: height
           }
 
-          // this.items.push(item)
-          this.addItem(item)
+          // await this.addItem(item)
         }
 
         return item
@@ -168,7 +168,7 @@
           let item = this.items[index]
 
           if (item.probability > this.threshold2) {
-            console.log(item.item_name, item.probability)
+            console.log(item.item_name, item.probability, item.x, item.y, item.width, item.height)
 
             const objectRectangles = document.createElement('div')
             const objectText = document.createElement('span')
@@ -190,7 +190,7 @@
             const b = Math.floor(item.y / this.srcImg.height * 255)
             const backColor = 'rgba(' + r + ',' +
               g + ', ' +
-              b + ', 0.5)'
+              b + ', 0.8)'
 
             const textColor = 'rgb(' + (255 - r) + ',' +
               (255 - g) + ', ' +
@@ -246,27 +246,19 @@
         canvas.className = 'scanned-imgs'
         canvas.width = canvasSize
         canvas.height = canvasSize
-        // canvas.style.backgroundColor = 'rgb(123, 456, 789)'
-        // canvas.style.margin = '5px'
-        // canvas.style.border = '1px solid darkred'
+
         let cvX = 0
         let cvY = 0
         let cvW = canvasSize
         let cvH = canvasSize
-        // if (imgW > imgH) {
-        //   imgY -= (imgW - imgH) / 2
-        //   imgY = Math.max(0, imgY)
-        // } else if (imgW < imgH) {
-        //   imgX -= (imgH - imgW) / 2
-        //   imgX = Math.max(0, imgX)
-        // }
-        // if (imgW > imgH) {
-        //   cvH = canvasSize * (imgH / imgW)
-        //   cvY += (canvasSize - cvH) / 2
-        // } else if (imgW < imgH) {
-        //   cvW = canvasSize * (imgW / imgH)
-        //   cvX += (canvasSize - cvW) / 2
-        // }
+
+        if (imgW > imgH) {
+          cvH = canvasSize * (imgH / imgW)
+          cvY += (canvasSize - cvH) / 2
+        } else if (imgW < imgH) {
+          cvW = canvasSize * (imgW / imgH)
+          cvX += (canvasSize - cvW) / 2
+        }
 
         const ctx = canvas.getContext('2d')
         ctx.drawImage(
@@ -279,10 +271,6 @@
           cvY,
           cvW,
           cvH
-          // 0,
-          // 0,
-          // canvasSize,
-          // canvasSize
         )
 
         return ctx.getImageData(0, 0, canvasSize, canvasSize)
@@ -338,9 +326,6 @@
             const pos = this.positionRelationship(item, compareItem)
 
             if (pos === this.position.CONTAINED || pos === this.position.CONTAIN) {
-              // console.log('contain')
-              // this.items.splice(index, 1)
-              // index--
               if (probability >= _probability) {
                 this.items.splice(index, 1)
                 index--
@@ -349,24 +334,32 @@
               }
             // }
             } else if (pos === this.position.INTERSECTION) {
-              if (shouldAdd) {
-                this.items.push(item)
-                shouldAdd = false
-              }
-              // console.log('intersection')
+              console.log('intersection', shouldAdd)
+              console.log('item:', item.x, item.y, item.width, item.height)
+              console.log('compare item:', compareItem.x, compareItem.y, compareItem.width, compareItem.height)
+              // if (shouldAdd) {
+              //   this.items.push(item)
+              //   shouldAdd = false
+              // }
+
               // detect intersection part
               const intersectionX = Math.max(item.x, compareItem.x)
               const intersectionY = Math.max(item.y, compareItem.y)
               const intersectionW = Math.min(item.x + item.width, compareItem.x + compareItem.width) - intersectionX
               const intersectionH = Math.min(item.y + item.height, compareItem.y + compareItem.height) - intersectionY
-              await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
+              const itemIntersection = await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
+              // console.log(intersectionX, intersectionY, intersectionW, intersectionH, 'i')
 
               // detect union part
               const unionX = Math.min(item.x, compareItem.x)
               const unionY = Math.min(item.y, compareItem.y)
               const unionW = Math.max(item.x + item.width, compareItem.x + compareItem.width) - unionX
               const unionH = Math.max(item.y + item.height, compareItem.y + compareItem.height) - unionY
-              await this.objectDetection(unionX, unionY, unionW, unionH)
+              const itemUnion = await this.objectDetection(unionX, unionY, unionW, unionH)
+              // console.log(unionX, unionY, unionW, unionH, 'u')
+
+              // const maxProbability =
+              // if (itemIntersection.probability === Math.max(probability, _probability, itemIntersection.probability, itemUnion.probability))
             }
           }
         }
@@ -401,12 +394,9 @@
 
 <style>
   #src-img-div {
-    /*width: 800px;*/
-    /*height: 800px;*/
     margin-left: 50px;
     text-align: left;
     padding: 0;
-    /*border: 2px solid darkred;*/
     position:relative;
   }
 
