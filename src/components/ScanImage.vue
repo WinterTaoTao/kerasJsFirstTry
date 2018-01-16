@@ -25,7 +25,7 @@
         KerasJS: require('keras-js'),
 
         modelFilePath: '/src/models/squeezenet_v1.1.bin',
-        sampleImgPath: '/src/assets/sample-images/photo.jpg',
+        sampleImgPath: '/src/assets/sample-images/photo6.jpg',
         canvasSize: 227,
         inputImgSize: 0,
         model: null,
@@ -33,6 +33,8 @@
         items: [],
         threshold1: 0.5,
         threshold2: 0.8,
+
+        notCheckList: [],
 
         position: {
           INDEPENDENT: 0,
@@ -70,14 +72,6 @@
       },
 
       async objectDetection (x, y, width, height) {
-        // if (width > height) {
-        //   y -= (width - height) / 2
-        //   y = Math.max(0, y)
-        // } else if (width < height) {
-        //   x -= (height - width) / 2
-        //   x = Math.max(0, x)
-        // }
-
         let imageData = this.insertNewCanvas(
           this.canvasSize,
           x,
@@ -86,36 +80,36 @@
           height
         )
 
-        let item = null
         const output = await this.runModel(imageData)
         const result = output[0]
 
-        console.log(result.name, result.probability, x, y, width, height)
+        console.log(result.name, result.probability)
 
         if (result.probability > this.threshold1) {
-          item = {
+          const item = {
             item_name: result.name,
             probability: result.probability,
-            x: x,
-            y: y,
-            width: width,
-            height: height
+            boundary: {
+              x: x,
+              y: y,
+              width: width,
+              height: height
+            }
           }
 
-          // await this.addItem(item)
+          await this.addItem(item)
         }
-
-        return item
       },
 
       async scan () {
+        const start = new Date().getTime()
         this.items = []
+        this.notCheckList = []
+
         let myNode = document.getElementById('scan-img-root')
         while (myNode.firstChild) {
           myNode.removeChild(myNode.firstChild)
         }
-
-        const start = new Date().getTime()
 
         // original picture
         const srcImgWidth = this.srcImg.width
@@ -129,11 +123,7 @@
         //   (arg) => console.log(arg), [inputImgW]
         // )
 
-        let item = await this.objectDetection(inputImgX, inputImgY, inputImgW, inputImgH)
-        let probability = item ? item.probability : 0
-        if (probability > this.threshold1) {
-          await this.addItem(item)
-        }
+        await this.objectDetection(inputImgX, inputImgY, inputImgW, inputImgH)
 
         let scannerSize = srcImgWidth < srcImgHeight ? srcImgWidth : srcImgHeight
         let scannerLayer = 0
@@ -158,11 +148,7 @@
                 inputImgW = srcImgWidth - inputImgX
               }
 
-              item = await this.objectDetection(inputImgX, inputImgY, inputImgW, inputImgH)
-              probability = item ? item.probability : 0
-              if (probability > this.threshold1) {
-                await this.addItem(item)
-              }
+              await this.objectDetection(inputImgX, inputImgY, inputImgW, inputImgH)
             }
           }
 
@@ -174,7 +160,7 @@
           let item = this.items[index]
 
           if (item.probability > this.threshold2) {
-            console.log(item.item_name, item.probability, item.x, item.y, item.width, item.height)
+            console.log(item.item_name, item.probability, item.boundary)
 
             const objectRectangles = document.createElement('div')
             const objectText = document.createElement('span')
@@ -186,14 +172,14 @@
 
             objectText.innerText = item.item_name + ' ' + item.probability
 
-            objectRectangles.style.width = item.width + 'px'
-            objectRectangles.style.height = item.height + 'px'
-            objectRectangles.style.left = item.x + 'px'
-            objectRectangles.style.top = item.y + 'px'
+            objectRectangles.style.width = item.boundary.width + 'px'
+            objectRectangles.style.height = item.boundary.height + 'px'
+            objectRectangles.style.left = item.boundary.x + 'px'
+            objectRectangles.style.top = item.boundary.y + 'px'
 
             const r = Math.floor(index / this.items.length * 255)
-            const g = Math.floor(item.x / this.srcImg.width * 255)
-            const b = Math.floor(item.y / this.srcImg.height * 255)
+            const g = Math.floor(item.boundary.x / this.srcImg.width * 255)
+            const b = Math.floor(item.boundary.y / this.srcImg.height * 255)
             const backColor = 'rgba(' + r + ',' +
               g + ', ' +
               b + ', 0.8)'
@@ -320,87 +306,94 @@
       },
 
       async addItem (item) {
-        let shouldAdd = true
-        for (let index = 0; index < this.items.length; index++) {
-          const compareItem = this.items[index]
-          const itemName = item.item_name
-          const _itemName = compareItem.item_name
+        if (!this.inNotCheckList(item.boundary)) {
+          let shouldAdd = true
+          for (let index = 0; index < this.items.length; index++) {
+            const compareItem = this.items[index]
+            const itemName = item.item_name
+            const _itemName = compareItem.item_name
 
-          if (itemName === _itemName) {
-            const probability = item.probability
-            const _probability = compareItem.probability
-            const pos = this.positionRelationship(item, compareItem)
+            if (itemName === _itemName) {
+              const probability = item.probability
+              const _probability = compareItem.probability
 
-            if (pos === this.position.CONTAINED || pos === this.position.CONTAIN) {
-              if (probability >= _probability) {
-                this.items.splice(index, 1)
-                index--
-              } else {
-                shouldAdd = false
-              }
-            // }
-            } else if (pos === this.position.INTERSECTION) {
-              console.log('intersection', shouldAdd)
-              console.log('item:', item.x, item.y, item.width, item.height)
-              console.log('compare item:', compareItem.x, compareItem.y, compareItem.width, compareItem.height)
-              // if (shouldAdd) {
-              //   this.items.push(item)
-              //   shouldAdd = false
-              // }
+              const boundary = item.boundary
+              const _boundary = compareItem.boundary
 
-              // detect intersection part
-              const intersectionX = Math.max(item.x, compareItem.x)
-              const intersectionY = Math.max(item.y, compareItem.y)
-              const intersectionW = Math.min(item.x + item.width, compareItem.x + compareItem.width) - intersectionX
-              const intersectionH = Math.min(item.y + item.height, compareItem.y + compareItem.height) - intersectionY
-              const itemIntersection = await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
-              // console.log(intersectionX, intersectionY, intersectionW, intersectionH, 'i')
+              const pos = this.positionRelationship(boundary, _boundary)
 
-              // detect union part
-              const unionX = Math.min(item.x, compareItem.x)
-              const unionY = Math.min(item.y, compareItem.y)
-              const unionW = Math.max(item.x + item.width, compareItem.x + compareItem.width) - unionX
-              const unionH = Math.max(item.y + item.height, compareItem.y + compareItem.height) - unionY
-              const itemUnion = await this.objectDetection(unionX, unionY, unionW, unionH)
-              // console.log(unionX, unionY, unionW, unionH, 'u')
-
-              const interProbability = itemIntersection ? itemIntersection.probability : 0
-              const unionProbability = itemUnion ? itemUnion.probability : 0
-              const maxProbability = Math.max(probability, _probability, interProbability, unionProbability)
-              const minProbabilityOrigin = Math.min(probability, _probability)
-              const maxProbabilityCombine = Math.max(interProbability, unionProbability)
-
-              if (maxProbabilityCombine >= minProbabilityOrigin) {
-                if (interProbability === maxProbability) {
-                  this.items.splice(index, 1, itemIntersection)
-                  shouldAdd = false
-                } else if (unionProbability === maxProbability) {
-                  this.items.splice(index, 1, itemUnion)
-                  shouldAdd = false
-                } else if (probability === maxProbability) {
+              if (pos === this.position.CONTAINED || pos === this.position.CONTAIN) {
+                if (probability >= _probability) {
                   this.items.splice(index, 1)
                   index--
-                } else if (_probability === maxProbability) {
+                } else {
                   shouldAdd = false
                 }
+                // }
+              } else if (pos === this.position.INTERSECTION) {
+                // console.log('intersection', shouldAdd)
+                // console.log('item:', item.boundary)
+                // console.log('compare item:', compareItem.boundary)
+                this.notCheckList.push(boundary)
+                if (shouldAdd) {
+                  this.items.push(item)
+                  shouldAdd = false
+                }
+
+                // detect intersection part
+                const intersectionX = Math.max(boundary.x, _boundary.x)
+                const intersectionY = Math.max(boundary.y, _boundary.y)
+                const intersectionW = Math.min(boundary.x + boundary.width, _boundary.x + _boundary.width) - intersectionX
+                const intersectionH = Math.min(boundary.y + boundary.height, _boundary.y + _boundary.height) - intersectionY
+                await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
+                // const itemIntersection = await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
+
+                // detect union part
+                const unionX = Math.min(boundary.x, _boundary.x)
+                const unionY = Math.min(boundary.y, _boundary.y)
+                const unionW = Math.max(boundary.x + boundary.width, _boundary.x + _boundary.width) - unionX
+                const unionH = Math.max(boundary.y + boundary.height, _boundary.y + _boundary.height) - unionY
+                await this.objectDetection(unionX, unionY, unionW, unionH)
+                // const itemUnion = await this.objectDetection(unionX, unionY, unionW, unionH)
+
+                // const interProbability = itemIntersection.probability
+                // const unionProbability = itemUnion.probability
+                // const maxProbability = Math.max(probability, _probability, interProbability, unionProbability)
+                // const minProbabilityOrigin = Math.min(probability, _probability)
+                // const maxProbabilityCombine = Math.max(interProbability, unionProbability)
+                //
+                // if (maxProbabilityCombine >= minProbabilityOrigin) {
+                //   if (interProbability === maxProbability) {
+                //     this.items.splice(index, 1, itemIntersection)
+                //     shouldAdd = false
+                //   } else if (unionProbability === maxProbability) {
+                //     this.items.splice(index, 1, itemUnion)
+                //     shouldAdd = false
+                //   } else if (probability === maxProbability) {
+                //     this.items.splice(index, 1)
+                //     index--
+                //   } else if (_probability === maxProbability) {
+                //     shouldAdd = false
+                //   }
+                // }
               }
             }
           }
-        }
-        if (shouldAdd) {
-          this.items.push(item)
+          if (shouldAdd) {
+            this.items.push(item)
+          }
         }
       },
 
-      positionRelationship (item, compareItem) {
-        const xStart = item.x
-        const yStart = item.y
-        const xEnd = xStart + item.width
-        const yEnd = yStart + item.height
-        const _xStart = compareItem.x
-        const _yStart = compareItem.y
-        const _xEnd = _xStart + compareItem.width
-        const _yEnd = _yStart + compareItem.height
+      positionRelationship (itemBoundary, compareItemBoundary) {
+        const xStart = itemBoundary.x
+        const yStart = itemBoundary.y
+        const xEnd = xStart + itemBoundary.width
+        const yEnd = yStart + itemBoundary.height
+        const _xStart = compareItemBoundary.x
+        const _yStart = compareItemBoundary.y
+        const _xEnd = _xStart + compareItemBoundary.width
+        const _yEnd = _yStart + compareItemBoundary.height
 
         if (xStart >= _xEnd || yStart >= _yEnd || _xStart >= xEnd || _yStart >= yEnd) {
           return this.position.INDEPENDENT // two independent items
@@ -411,6 +404,20 @@
         } else {
           return this.position.INTERSECTION // two intersection items
         }
+      },
+
+      inNotCheckList (boundary) {
+        for (let i = 0; i < this.notCheckList.length; i++) {
+          const _boundary = this.notCheckList[i]
+          if (boundary.x === _boundary.x &&
+              boundary.y === _boundary.y &&
+              boundary.width === _boundary.width &&
+              boundary.height === _boundary.height
+          ) {
+            return true
+          }
+        }
+        return false
       }
     }
   }
@@ -432,7 +439,7 @@
   .object-rectangles {
     width: 200px;
     height: 200px;
-    border: 3px solid darkred;
+    border: 3px solid;
     position: absolute;
     z-index: 1;
   }
