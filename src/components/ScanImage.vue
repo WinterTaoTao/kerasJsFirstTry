@@ -25,7 +25,7 @@
         KerasJS: require('keras-js'),
 
         modelFilePath: '/src/models/squeezenet_v1.1.bin',
-        sampleImgPath: '/src/assets/sample-images/photo6.jpg',
+        sampleImgPath: '/src/assets/sample-images/photo5.jpg',
         canvasSize: 227,
         inputImgSize: 0,
         model: null,
@@ -331,9 +331,6 @@
                 }
                 // }
               } else if (pos === this.position.INTERSECTION) {
-                // console.log('intersection', shouldAdd)
-                // console.log('item:', item.boundary)
-                // console.log('compare item:', compareItem.boundary)
                 this.notCheckList.push(boundary)
                 if (shouldAdd) {
                   this.items.push(item)
