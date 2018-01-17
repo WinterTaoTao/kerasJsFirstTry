@@ -1,6 +1,7 @@
 <template>
   <div>
     <a href="#/objectDetection">Object Detection Demo</a><br/>
+    <a href="#/ky">Key Frames Etractor Demo</a><br/>
 
     <div id="src-img-div">
       <img id="src-img" v-bind:src="sampleImgPath" style="position: absolute">
@@ -25,7 +26,7 @@
         KerasJS: require('keras-js'),
 
         modelFilePath: '/src/models/squeezenet_v1.1.bin',
-        sampleImgPath: '/src/assets/sample-images/photo8.jpg',
+        sampleImgPath: '/src/assets/sample-images/photo2.jpg',
         canvasSize: 227,
         inputImgSize: 0,
         model: null,

@@ -16,6 +16,8 @@
   "dependencies": {
     "async": "^2.6.0",
     "blueimp-load-image": "^2.17.1",
+    "extract-keyframes": "^1.1.1",
+    "ffmpeg-static": "^2.1.0",
     "keras-js": "^1.0.2",
     "ndarray": "^1.0.18",
     "ndarray-ops": "^1.2.2",
