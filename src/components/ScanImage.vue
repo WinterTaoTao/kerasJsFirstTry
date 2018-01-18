@@ -18,13 +18,13 @@
   import _ from 'lodash'
   import { imagenetClasses } from '../data/imagenet'
 
+  const KerasJS = require('keras-js')
+
   export default {
     name: 'scan-image',
 
     data: function () {
       return {
-        KerasJS: require('keras-js'),
-
         modelFilePath: '/src/models/squeezenet_v1.1.bin',
         sampleImgPath: '/src/assets/sample-images/photo2.jpg',
         canvasSize: 227,
@@ -62,7 +62,7 @@
     methods: {
       async initModel () {
         document.getElementById('scan-button').disabled = true
-        this.model = new this.KerasJS.Model({
+        this.model = new KerasJS.Model({
           filepath: this.modelFilePath,
           gpu: true,
           filesystem: true
