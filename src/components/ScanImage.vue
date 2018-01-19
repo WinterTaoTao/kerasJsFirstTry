@@ -120,10 +120,6 @@
         let inputImgW = srcImgWidth
         let inputImgH = srcImgHeight
 
-        // this.$worker.run(
-        //   (arg) => console.log(arg), [inputImgW]
-        // )
-
         await this.objectDetection(inputImgX, inputImgY, inputImgW, inputImgH)
 
         let scannerSize = srcImgWidth < srcImgHeight ? srcImgWidth : srcImgHeight
@@ -344,7 +340,6 @@
                 const intersectionW = Math.min(boundary.x + boundary.width, _boundary.x + _boundary.width) - intersectionX
                 const intersectionH = Math.min(boundary.y + boundary.height, _boundary.y + _boundary.height) - intersectionY
                 await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
-                // const itemIntersection = await this.objectDetection(intersectionX, intersectionY, intersectionW, intersectionH)
 
                 // detect union part
                 const unionX = Math.min(boundary.x, _boundary.x)
@@ -352,28 +347,6 @@
                 const unionW = Math.max(boundary.x + boundary.width, _boundary.x + _boundary.width) - unionX
                 const unionH = Math.max(boundary.y + boundary.height, _boundary.y + _boundary.height) - unionY
                 await this.objectDetection(unionX, unionY, unionW, unionH)
-                // const itemUnion = await this.objectDetection(unionX, unionY, unionW, unionH)
-
-                // const interProbability = itemIntersection.probability
-                // const unionProbability = itemUnion.probability
-                // const maxProbability = Math.max(probability, _probability, interProbability, unionProbability)
-                // const minProbabilityOrigin = Math.min(probability, _probability)
-                // const maxProbabilityCombine = Math.max(interProbability, unionProbability)
-                //
-                // if (maxProbabilityCombine >= minProbabilityOrigin) {
-                //   if (interProbability === maxProbability) {
-                //     this.items.splice(index, 1, itemIntersection)
-                //     shouldAdd = false
-                //   } else if (unionProbability === maxProbability) {
-                //     this.items.splice(index, 1, itemUnion)
-                //     shouldAdd = false
-                //   } else if (probability === maxProbability) {
-                //     this.items.splice(index, 1)
-                //     index--
-                //   } else if (_probability === maxProbability) {
-                //     shouldAdd = false
-                //   }
-                // }
               }
             }
           }

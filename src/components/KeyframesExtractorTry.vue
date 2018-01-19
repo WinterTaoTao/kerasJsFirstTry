@@ -4,6 +4,7 @@
 
 <script>
   const ffmpeg = require('ffmpeg')
+  // const fs = require('browserify-fs')
   export default {
     name: 'key-frame-etractor-try',
 
@@ -18,6 +19,11 @@
       // eslint-disable-next-line
       let process = new ffmpeg(this.sampleVideoPath)
       console.log(process)
+      // process.screenshots({
+      //   count: 4,
+      //   folder: this.outputPath
+      // })
+      // console.log(process)
       // try {
       //   // eslint-disable-next-line
       //   let process = new ffmpeg(this.sampleVideoPath)
@@ -35,26 +41,6 @@
       //   console.log(json)
       // }).error(function (error) {
       //   console.log(error)
-      // })
-
-      // this.sampleVideoPath += ''
-      // extractKeyframes(this.sampleVideoPath).then(extractionProcess => {
-      //   // Event fired when extraction process has begun.
-      //   extractionProcess.on('start', function () {
-      //     console.log('Started')
-      //   }, false)
-      //
-      //   // Event fired when a keyframe is extracted
-      //   extractionProcess.on('keyframe', function (data) {
-      //     console.log('KEYFRAME:', data)
-      //   })
-      //
-      //   // Event fired when all keyframes have been extracted from the video
-      //   extractionProcess.on('finish', function (data) {
-      //     console.log('Finish:', data)
-      //   })
-      // }).catch(err => {
-      //   console.log('Error extracting keyframes:', err)
       // })
     }
   }
