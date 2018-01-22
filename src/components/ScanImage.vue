@@ -1,7 +1,7 @@
 <template>
   <div>
     <a href="#/objectDetection">Object Detection Demo</a><br/>
-    <a href="#/ky">Key Frames Etractor Demo</a><br/>
+    <!--<a href="#/ky">Key Frames Etractor Demo</a><br/>-->
 
     <div id="src-img-div">
       <img id="src-img" v-bind:src="sampleImgPath" style="position: absolute">

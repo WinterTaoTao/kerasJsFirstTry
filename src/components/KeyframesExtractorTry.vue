@@ -3,7 +3,8 @@
 </template>
 
 <script>
-  const ffmpeg = require('ffmpeg')
+  // const ffmpeg = require('fluent-ffmpeg')
+  // console.log(ffmpeg)
   export default {
     name: 'key-frame-etractor-try',
 
@@ -16,8 +17,14 @@
 
     mounted () {
       // eslint-disable-next-line
-      const p = ffmpeg(this.sampleVideoPath)
-      console.log(p)
+      // const p = ffmpeg(this.sampleVideoPath)
+      // console.log(p)
+      // ffmpeg(this.sampleVideoPath)
+      //   .output(this.outputPath + 'output.mp4')
+      //   .on('end', function () {
+      //     console.log('finished')
+      //   })
+      //   .run()
     }
   }
 </script>
