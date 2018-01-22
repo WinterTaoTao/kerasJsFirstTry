@@ -3,7 +3,7 @@
 </template>
 
 <script>
-  const ffmpeg = require('fluent-ffmpeg')
+  const ffmpeg = require('ffmpeg')
   export default {
     name: 'key-frame-etractor-try',
 
