@@ -1,30 +1,39 @@
 <template>
-
+  <div>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <input type="file" name="filetoupload"/><br>
+      <!--<input type="submit"/>-->
+      <button id="upload" type="button" v-on:click="upload">upload</button>
+    </form>
+  </div>
 </template>
 
 <script>
-  // const ffmpeg = require('fluent-ffmpeg')
-  // console.log(ffmpeg)
+  import $ from 'jquery'
   export default {
-    name: 'key-frame-etractor-try',
-
-    data: function () {
-      return {
-        sampleVideoPath: '/src/assets/sample-video/sample.mp4',
-        outputPath: '/src/assets/sample-video/'
-      }
-    },
+    name: 'scan-image',
 
     mounted () {
-      // eslint-disable-next-line
-      // const p = ffmpeg(this.sampleVideoPath)
-      // console.log(p)
-      // ffmpeg(this.sampleVideoPath)
-      //   .output(this.outputPath + 'output.mp4')
-      //   .on('end', function () {
-      //     console.log('finished')
-      //   })
-      //   .run()
+    },
+
+    methods: {
+      upload () {
+        $.ajax({
+          url: 'http://localhost:3000/fileupload',
+          type: 'POST',
+          cache: false,
+          data: new FormData($('#uploadForm')[0]),
+          processData: false,
+          contentType: false,
+          success: function (data) {
+            console.log(data.msg)
+          }
+        }).done(function (res) {
+          console.log('yes')
+        }).fail(function (res) {
+          console.log('no')
+        })
+      }
     }
   }
 </script>

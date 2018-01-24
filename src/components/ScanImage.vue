@@ -1,7 +1,7 @@
 <template>
   <div>
     <a href="#/objectDetection">Object Detection Demo</a><br/>
-    <!--<a href="#/ky">Key Frames Etractor Demo</a><br/>-->
+    <a href="#/ky">Key Frames Etractor Demo</a><br/>
 
     <div id="src-img-div">
       <img id="src-img" v-bind:src="sampleImgPath" style="position: absolute">
@@ -19,7 +19,6 @@
   import { imagenetClasses } from '../data/imagenet'
 
   const KerasJS = require('keras-js')
-  // const napa = require('napajs')
 
   export default {
     name: 'scan-image',
@@ -58,16 +57,6 @@
       }
 
       this.initModel()
-
-      // let zone1 = napa.zone.create('zone1', { workers: 4 })
-      // zone1.broadcast('console.log("hello world");')
-      //
-      // zone1.execute(
-      //   (text) => text,
-      //   ['hello winter']
-      // ).then((result) => {
-      //   console.log(result.value)
-      // })
     },
 
     methods: {
