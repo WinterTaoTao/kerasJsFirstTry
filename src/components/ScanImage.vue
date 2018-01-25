@@ -7,7 +7,7 @@
       <img id="src-img" v-bind:src="sampleImgPath" style="position: absolute">
     </div>
 
-    <button id="scan-button" @click="scanImg2">Scan</button><br/>
+    <button id="scan-button" @click="scanImg">Scan</button><br/>
     <div id="scan-img-root"></div>
   </div>
 </template>
@@ -23,7 +23,7 @@
     data: function () {
       return {
         modelFilePath: '/src/models/squeezenet_v1.1.bin',
-        sampleImgPath: '/src/assets/sample-images/photo5.jpg',
+        sampleImgPath: '/src/assets/sample-images/photo8.jpg',
         canvasSize: 227,
         inputImgSize: 0,
         model: null,
@@ -69,7 +69,7 @@
         document.getElementById('scan-button').disabled = false
       },
 
-      async scanImg2 () {
+      async scanImg () {
         this.items = await objectDetectionScan(
           this.srcImg,
           this.model,
@@ -81,7 +81,7 @@
           let item = this.items[index]
 
           if (item.probability > this.threshold2) {
-            console.log(item.item_name, item.probability, item.boundary)
+            console.log(item.item_name, item.probability)
 
             const objectRectangles = document.createElement('div')
             const objectText = document.createElement('span')
