@@ -7,7 +7,7 @@
       <img id="src-img" v-bind:src="sampleImgPath" style="position: absolute">
     </div>
 
-    <button id="scan-button" @click="scan">Scan</button><br/>
+    <button id="scan-button" @click="scanImg2">Scan</button><br/>
     <div id="scan-img-root"></div>
   </div>
 </template>
@@ -17,6 +17,7 @@
   import ops from 'ndarray-ops'
   import _ from 'lodash'
   import { imagenetClasses } from '../data/imagenet'
+  import { scan } from '../util/ObjectDetection'
 
   const KerasJS = require('keras-js')
 
@@ -26,7 +27,7 @@
     data: function () {
       return {
         modelFilePath: '/src/models/squeezenet_v1.1.bin',
-        sampleImgPath: '/src/assets/sample-images/photo2.jpg',
+        sampleImgPath: '/src/assets/sample-images/photo5.jpg',
         canvasSize: 227,
         inputImgSize: 0,
         model: null,
@@ -102,7 +103,59 @@
         }
       },
 
-      async scan () {
+      async scanImg2 () {
+        this.items = await scan(
+          this.srcImg,
+          this.model,
+          this.canvasSize,
+          this.threshold1
+        )
+
+        console.log(this.items)
+
+        for (let index = 0; index < this.items.length; index++) {
+          let item = this.items[index]
+
+          if (item.probability > this.threshold2) {
+            console.log(item.item_name, item.probability, item.boundary)
+
+            const objectRectangles = document.createElement('div')
+            const objectText = document.createElement('span')
+            const file = document.getElementById('src-img-div')
+
+            objectRectangles.appendChild(objectText)
+            file.appendChild(objectRectangles)
+            objectRectangles.className = 'object-rectangles'
+
+            objectText.innerText = item.item_name + ' ' + item.probability
+
+            objectRectangles.style.width = item.boundary.width + 'px'
+            objectRectangles.style.height = item.boundary.height + 'px'
+            objectRectangles.style.left = item.boundary.x + 'px'
+            objectRectangles.style.top = item.boundary.y + 'px'
+
+            const r = Math.floor(index / this.items.length * 255)
+            const g = Math.floor(item.boundary.x / this.srcImg.width * 255)
+            const b = Math.floor(item.boundary.y / this.srcImg.height * 255)
+            const backColor = 'rgba(' + r + ',' +
+              g + ', ' +
+              b + ', 0.8)'
+
+            const textColor = 'rgb(' + (255 - r) + ',' +
+              (255 - g) + ', ' +
+              (255 - b) + ')'
+
+            objectRectangles.style.borderColor = backColor
+            objectText.style.backgroundColor = backColor
+            objectText.style.color = textColor
+          } else {
+            this.items.splice(index, 1)
+            index = index - 1
+          }
+        }
+      },
+
+      async scanImg () {
         const start = new Date().getTime()
         this.items = []
         this.notCheckList = []
@@ -229,9 +282,9 @@
       ) {
         // create a new canvas
         const canvas = document.createElement('canvas')
-        const file = document.getElementById('scan-img-root')
-
-        file.appendChild(canvas)
+        // const file = document.getElementById('scan-img-root')
+        //
+        // file.appendChild(canvas)
         canvas.className = 'scanned-imgs'
         canvas.width = canvasSize
         canvas.height = canvasSize
@@ -261,7 +314,7 @@
           cvW,
           cvH
         )
-
+        console.log('haha: ', canvas.width)
         return ctx.getImageData(0, 0, canvasSize, canvasSize)
       },
 
