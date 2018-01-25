@@ -1,4 +1,4 @@
-import { objectDetection } from './ObjectDetection'
+import { objectDetectionForScanner } from './ObjectDetection'
 
 export async function scan (
   img,
@@ -18,7 +18,7 @@ export async function scan (
   let inputImgW = srcImgWidth
   let inputImgH = srcImgHeight
 
-  await objectDetection(
+  await objectDetectionForScanner(
     img,
     detectionModel,
     inputSize,
@@ -51,7 +51,7 @@ export async function scan (
           inputImgW = srcImgWidth - inputImgX
         }
 
-        await objectDetection(
+        await objectDetectionForScanner(
           img,
           detectionModel,
           inputSize,

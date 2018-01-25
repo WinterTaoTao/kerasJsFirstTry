@@ -13,14 +13,81 @@ const position = {
 let items = []
 let notCheckList = []
 
-export async function objectDetection (
+// Scan Image
+export async function objectDetectionScan (
+  img,
+  detectionModel,
+  inputSize,
+  threshold = 0.5
+) {
+  const start = new Date().getTime()
+
+  // original picture
+  const srcImgWidth = img.width
+  const srcImgHeight = img.height
+  let inputImgX = 0
+  let inputImgY = 0
+  let inputImgW = srcImgWidth
+  let inputImgH = srcImgHeight
+
+  await objectDetectionForScanner(
+    img,
+    detectionModel,
+    inputSize,
+    inputImgX, inputImgY,
+    inputImgW, inputImgH,
+    threshold)
+
+  let scannerSize = srcImgWidth < srcImgHeight ? srcImgWidth : srcImgHeight
+  let scannerLayer = 0
+
+  // scan parts of picture
+  while (scannerSize > 32 && scannerLayer < 3) {
+    inputImgY = 0
+    let stepSize = scannerSize / 2
+
+    for (inputImgY; inputImgY < srcImgHeight; inputImgY += stepSize) {
+      inputImgX = 0
+      inputImgH = scannerSize
+
+      if (inputImgY + scannerSize > srcImgHeight) {
+        inputImgH = srcImgHeight - inputImgY
+      }
+
+      for (inputImgX; inputImgX < srcImgWidth; inputImgX += stepSize) {
+        inputImgW = scannerSize
+
+        if (inputImgX + scannerSize > srcImgWidth) {
+          inputImgW = srcImgWidth - inputImgX
+        }
+
+        await objectDetectionForScanner(
+          img,
+          detectionModel,
+          inputSize,
+          inputImgX, inputImgY,
+          inputImgW, inputImgH,
+          threshold)
+      }
+    }
+
+    scannerLayer++
+    scannerSize /= 2
+  }
+
+  const end = new Date().getTime()
+  console.log('Total Scan Time: ', end - start, 'ms')
+
+  return items
+}
+
+async function objectDetectionForScanner (
   srcImg,
   detectionModel,
   inputSize,
-  imgX, imgY,
-  imgW, imgH,
-  threshold = 0.5,
-  isForScan = false) {
+  imgX = 0, imgY = 0,
+  imgW = srcImg.width, imgH = srcImg.height,
+  threshold = 0.5) {
   // get image data for detection
   let imageData = getImgData(
     srcImg,
@@ -29,7 +96,7 @@ export async function objectDetection (
     imgW, imgH
   )
 
-  const output = await runModel(detectionModel, imageData)
+  const output = await runModel(detectionModel, imageData, 1)
   const result = output[0]
 
   console.log(result.name, result.probability)
@@ -45,19 +112,13 @@ export async function objectDetection (
         height: imgH
       }
     }
-
-    if (isForScan) {
-      await addItem(
-        srcImg,
-        detectionModel,
-        inputSize,
-        item,
-        threshold)
-    }
-
-    return item
+    await addItem(
+      srcImg,
+      detectionModel,
+      inputSize,
+      item,
+      threshold)
   }
-  return null
 }
 
 function getImgData (
@@ -100,7 +161,7 @@ function getImgData (
 }
 
 // run object detection model
-async function runModel (model, imageData) {
+async function runModel (model, imageData, num) {
   const start = new Date().getTime()
 
   // preprocess image data
@@ -114,7 +175,7 @@ async function runModel (model, imageData) {
   // recognize
   const outputData = await model.predict(inputData)
   let output = outputData[outputName]
-  output = imagenetClassesTopK(output, 1)
+  output = imagenetClassesTopK(output, num)
 
   const end = new Date().getTime()
   console.log('Predict Time: ', end - start, 'ms')
@@ -199,28 +260,26 @@ async function addItem (
           const intersectionY = Math.max(boundary.y, _boundary.y)
           const intersectionW = Math.min(boundary.x + boundary.width, _boundary.x + _boundary.width) - intersectionX
           const intersectionH = Math.min(boundary.y + boundary.height, _boundary.y + _boundary.height) - intersectionY
-          await objectDetection(
+          await objectDetectionForScanner(
             srcImg,
             detectionModel,
             inputSize,
             intersectionX, intersectionY,
             intersectionW, intersectionH,
-            threshold,
-            true)
+            threshold)
 
           // detect union part
           const unionX = Math.min(boundary.x, _boundary.x)
           const unionY = Math.min(boundary.y, _boundary.y)
           const unionW = Math.max(boundary.x + boundary.width, _boundary.x + _boundary.width) - unionX
           const unionH = Math.max(boundary.y + boundary.height, _boundary.y + _boundary.height) - unionY
-          await objectDetection(
+          await objectDetectionForScanner(
             srcImg,
             detectionModel,
             inputSize,
             unionX, unionY,
             unionW, unionH,
-            threshold,
-            true)
+            threshold)
         }
       }
     }
@@ -264,74 +323,4 @@ function positionRelationship (itemBoundary, compareItemBoundary) {
   } else {
     return position.INTERSECTION // two intersection items
   }
-}
-
-// Scan Image
-export async function scan (
-  img,
-  detectionModel,
-  inputSize,
-  threshold = 0.5
-) {
-  const start = new Date().getTime()
-
-  // original picture
-  const srcImgWidth = img.width
-  const srcImgHeight = img.height
-  let inputImgX = 0
-  let inputImgY = 0
-  let inputImgW = srcImgWidth
-  let inputImgH = srcImgHeight
-
-  await objectDetection(
-    img,
-    detectionModel,
-    inputSize,
-    inputImgX, inputImgY,
-    inputImgW, inputImgH,
-    threshold,
-    true)
-
-  let scannerSize = srcImgWidth < srcImgHeight ? srcImgWidth : srcImgHeight
-  let scannerLayer = 0
-
-  // scan parts of picture
-  while (scannerSize > 32 && scannerLayer < 3) {
-    inputImgY = 0
-    let stepSize = scannerSize / 2
-
-    for (inputImgY; inputImgY < srcImgHeight; inputImgY += stepSize) {
-      inputImgX = 0
-      inputImgH = scannerSize
-
-      if (inputImgY + scannerSize > srcImgHeight) {
-        inputImgH = srcImgHeight - inputImgY
-      }
-
-      for (inputImgX; inputImgX < srcImgWidth; inputImgX += stepSize) {
-        inputImgW = scannerSize
-
-        if (inputImgX + scannerSize > srcImgWidth) {
-          inputImgW = srcImgWidth - inputImgX
-        }
-
-        await objectDetection(
-          img,
-          detectionModel,
-          inputSize,
-          inputImgX, inputImgY,
-          inputImgW, inputImgH,
-          threshold,
-          true)
-      }
-    }
-
-    scannerLayer++
-    scannerSize /= 2
-  }
-
-  const end = new Date().getTime()
-  console.log('Total Scan Time: ', end - start, 'ms')
-
-  return items
 }
