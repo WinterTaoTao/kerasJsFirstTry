@@ -18,13 +18,18 @@ export async function objectDetectionScan (
   img,
   detectionModel,
   inputSize,
-  threshold = 0.5
+  threshold1 = 0.5,
+  threshold2 = 0.8
 ) {
+  console.log('Processing......')
   const start = new Date().getTime()
+  items = []
+  document.getElementById('scan-img-root').innerHTML = ''
 
   // original picture
   const srcImgWidth = img.width
   const srcImgHeight = img.height
+  // console.log(img.innerHeight)
   let inputImgX = 0
   let inputImgY = 0
   let inputImgW = srcImgWidth
@@ -36,7 +41,7 @@ export async function objectDetectionScan (
     inputSize,
     inputImgX, inputImgY,
     inputImgW, inputImgH,
-    threshold)
+    threshold1)
 
   let scannerSize = srcImgWidth < srcImgHeight ? srcImgWidth : srcImgHeight
   let scannerLayer = 0
@@ -67,7 +72,7 @@ export async function objectDetectionScan (
           inputSize,
           inputImgX, inputImgY,
           inputImgW, inputImgH,
-          threshold)
+          threshold1)
       }
     }
 
@@ -77,6 +82,15 @@ export async function objectDetectionScan (
 
   const end = new Date().getTime()
   console.log('Total Scan Time: ', end - start, 'ms')
+
+  for (let index = 0; index < items.length; index++) {
+    if (items[index].probability < threshold2) {
+      items.splice(index, 1)
+      index--
+    } else {
+      console.log(items[index].item_name, items[index].probability)
+    }
+  }
 
   return items
 }
@@ -99,7 +113,7 @@ async function objectDetectionForScanner (
   const output = await runModel(detectionModel, imageData, 1)
   const result = output[0]
 
-  console.log(result.name, result.probability)
+  // console.log(result.name, result.probability)
 
   if (result.probability > threshold) {
     const item = {
@@ -128,9 +142,13 @@ function getImgData (
   imgW = canvasSize, imgH = canvasSize) {
   // create a new canvas
   const canvas = document.createElement('canvas')
+
   canvas.className = 'scanned-imgs'
   canvas.width = canvasSize
   canvas.height = canvasSize
+
+  const file = document.getElementById('scan-img-root')
+  file.appendChild(canvas)
 
   let cvX = 0
   let cvY = 0
@@ -162,7 +180,7 @@ function getImgData (
 
 // run object detection model
 async function runModel (model, imageData, num) {
-  const start = new Date().getTime()
+  // const start = new Date().getTime()
 
   // preprocess image data
   const preprocessedData = preprocess(imageData)
@@ -177,8 +195,8 @@ async function runModel (model, imageData, num) {
   let output = outputData[outputName]
   output = imagenetClassesTopK(output, num)
 
-  const end = new Date().getTime()
-  console.log('Predict Time: ', end - start, 'ms')
+  // const end = new Date().getTime()
+  // console.log('Predict Time: ', end - start, 'ms')
   return output
 }
 
