@@ -7,9 +7,10 @@ import KeyframesExtractorTry from '../components/KeyframesExtractorTry'
 Vue.use(Router)
 
 export default new Router({
+  mode: 'history',
   routes: [
     {
-      path: '/',
+      path: '/single-picture',
       name: 'ScanImage',
       component: ScanImage
     },
@@ -19,7 +20,7 @@ export default new Router({
       component: ObjectDetectionTry
     },
     {
-      path: '/ky',
+      path: '/',
       name: 'KeyframesExtractorTry',
       component: KeyframesExtractorTry
     }

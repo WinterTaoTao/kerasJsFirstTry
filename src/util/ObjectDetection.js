@@ -24,12 +24,14 @@ export async function objectDetectionScan (
   console.log('Processing......')
   const start = new Date().getTime()
   items = []
-  document.getElementById('scan-img-root').innerHTML = ''
+
+  if (document.getElementById('scan-img-root')) {
+    document.getElementById('scan-img-root').innerHTML = ''
+  }
 
   // original picture
   const srcImgWidth = img.width
   const srcImgHeight = img.height
-  // console.log(img.innerHeight)
   let inputImgX = 0
   let inputImgY = 0
   let inputImgW = srcImgWidth
@@ -147,8 +149,17 @@ function getImgData (
   canvas.width = canvasSize
   canvas.height = canvasSize
 
-  const file = document.getElementById('scan-img-root')
-  file.appendChild(canvas)
+  if (document.getElementById('scan-img-root')) {
+    const file = document.getElementById('scan-img-root')
+    file.appendChild(canvas)
+  }
+  const scaleX = srcImg.width / srcImg.naturalWidth
+  const scaleY = srcImg.height / srcImg.naturalHeight
+
+  imgX /= scaleX
+  imgY /= scaleY
+  imgW /= scaleX
+  imgH /= scaleY
 
   let cvX = 0
   let cvY = 0

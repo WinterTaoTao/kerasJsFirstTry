@@ -1,10 +1,9 @@
 <template>
   <div>
-    <a href="#/objectDetection">Object Detection Demo</a><br/>
-    <a href="#/ky">Key Frames Etractor Demo</a><br/>
+    <!--<a href="#/objectDetection">Object Detection Demo</a><br/>-->
+    <a href="/">Go to Video Demo</a><br/>
 
     <div id="src-img-div">
-      <!--<img id="src-img" v-bind:src="sampleImgPath" style="position: absolute">-->
     </div>
 
     <button id="scan-button" @click="scanImg">Scan</button><br/>
@@ -23,10 +22,9 @@
     data: function () {
       return {
         modelFilePath: '/src/models/squeezenet_v1.1.bin',
-        sampleImgPath: '/src/assets/sample-images/photo5.jpg',
+        sampleImgPath: '/src/assets/sample-images/photo6.jpg',
         canvasSize: 227,
         model: null,
-        srcImg: new Image(),
         items: [],
         threshold1: 0.5,
         threshold2: 0.8
@@ -34,16 +32,14 @@
     },
 
     mounted () {
-      // this.srcImg.src = this.sampleImgPath
       let img = document.createElement('img')
       img.src = this.sampleImgPath
       img.id = 'src-img'
       img.style.position = 'absolute'
-      // img.height = 800
-      // let img = this.srcImg
       img.onload = function () {
+        img.height = 600
+        img.width = img.naturalWidth * (img.height / img.naturalHeight)
         let srcImgDiv = document.getElementById('src-img-div')
-        // console.log(img.width, img.height)
         srcImgDiv.style.width = img.width + 'px'
         srcImgDiv.style.height = img.height + 'px'
         srcImgDiv.appendChild(img)
@@ -119,10 +115,13 @@
 
 <style>
   #src-img-div {
-    margin-left: 50px;
+    /*margin-left: 50px;*/
+    margin-left: auto;
+    margin-right: auto;
     text-align: left;
     padding: 0;
     position:relative;
+    /*border: 2px solid darkred;*/
   }
 
   .scanned-imgs {
@@ -131,8 +130,6 @@
   }
 
   .object-rectangles {
-    width: 200px;
-    height: 200px;
     border: 3px solid;
     position: absolute;
     z-index: 1;
