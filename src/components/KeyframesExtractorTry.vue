@@ -99,7 +99,8 @@
               document.getElementById('scan-button').disabled = false
             },
             error: function (e) {
-              console.log('Error: ' + e.message)
+              document.getElementById('upload').disabled = false
+              console.log('Fail to get response')
             }
           })
         }
