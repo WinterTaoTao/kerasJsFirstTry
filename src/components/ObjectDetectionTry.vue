@@ -71,16 +71,6 @@
           const ctx = document.getElementById('input-img').getContext('2d')
           ctx.drawImage(img, 0, 0, canvaSize, canvaSize)
         }
-        // loadImage(
-        //   imagePath,
-        //   function (img) {
-        //     const ctx = document.getElementById('input-img').getContext('2d')
-        //     ctx.drawImage(img, 0, 0, canvaSize, canvaSize)
-        //   },
-        //   {
-        //     crossOrigin: 'Anonymous'
-        //   }
-        // )
       },
 
       async runModel () {
@@ -104,6 +94,7 @@
           const outputData = await this.model.predict(inputData)
 
           this.output = outputData[outputName]
+          console.log(this.output)
           this.output = this.imagenetClassesTopK(this.output, 5)
 
           const end = new Date().getTime()
