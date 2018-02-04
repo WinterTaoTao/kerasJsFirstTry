@@ -7,16 +7,15 @@
     </canvas><br/>
     <button @click="runModel" :disabled="isPredicting">predict</button>
     <div v-if="msg">{{msg}}</div>
-    <div v-for="items in output">
-      {{items.name}} {{items.probability}}
-    </div>
+    <!--<div v-for="items in output">-->
+      <!--{{items.name}} {{items.probability}}-->
+    <!--</div>-->
   </div>
 </template>
 
 <script>
   import ndarray from 'ndarray'
   import ops from 'ndarray-ops'
-  // import loadImage from 'blueimp-load-image'
   import _ from 'lodash'
   import { imagenetClasses } from '../data/imagenet'
 
@@ -27,7 +26,7 @@
 
     data () {
       return {
-        modelFilePath: '/src/models/squeezenet_v1.1.bin',
+        modelFilePath: '/src/models/model_multi.bin',
         sampleImgPath: '/src/assets/sample-images/dog1.jpg',
         canvasSize: 227,
         msg: 'Preparing...',
@@ -82,7 +81,6 @@
           // load image in canva
           const ctx = document.getElementById('input-img').getContext('2d')
           const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height)
-          // console.log(imageData)
 
           // preprocess image data
           const preprocessedData = this.preprocess(imageData)
@@ -94,7 +92,6 @@
           const outputData = await this.model.predict(inputData)
 
           this.output = outputData[outputName]
-          console.log(this.output)
           this.output = this.imagenetClassesTopK(this.output, 5)
 
           const end = new Date().getTime()
