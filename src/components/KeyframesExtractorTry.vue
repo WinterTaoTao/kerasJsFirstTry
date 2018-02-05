@@ -1,6 +1,6 @@
 <template>
   <div id="rootDiv">
-    <a href="/objectDetection">Go to Single Object Detection Demo</a>
+    <a href="/objectDetection">Go to Single Object Detection Demo</a><br/>
     <a href="/single-picture">Go to Single Picture Demo</a>
     <form id="uploadForm" enctype="multipart/form-data">
       <input type="file"
