@@ -93,7 +93,6 @@ export async function objectDetectionScan (
       console.log(items[index].item_name, items[index].probability)
     }
   }
-
   return items
 }
 
@@ -115,7 +114,7 @@ async function objectDetectionForScanner (
   const output = await runModel(detectionModel, imageData, 1)
   const result = output[0]
 
-  // console.log(result.name, result.probability)
+  console.log(result.name, result.probability)
 
   if (result.probability > threshold) {
     const item = {
@@ -191,7 +190,7 @@ function getImgData (
 
 // run object detection model
 async function runModel (model, imageData, num) {
-  // const start = new Date().getTime()
+  const start = new Date().getTime()
 
   // preprocess image data
   const preprocessedData = preprocess(imageData)
@@ -206,8 +205,8 @@ async function runModel (model, imageData, num) {
   let output = outputData[outputName]
   output = imagenetClassesTopK(output, num)
 
-  // const end = new Date().getTime()
-  // console.log('Predict Time: ', end - start, 'ms')
+  const end = new Date().getTime()
+  console.log('Predict Time: ', end - start, 'ms')
   return output
 }
 
